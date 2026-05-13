@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fees - School Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="Logo" class="sidebar-logo">
+            <span class="sidebar-title">School System</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="{{ url_for('grades') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Examinations</span>
+            </a>
+            <a href="{{ url_for('fees') }}" class="nav-item active">
+                <span class="nav-icon">💰</span>
+                <span class="nav-text">Fees</span>
+            </a>
+            {% if role in ['admin', 'attendance'] %}
+            <a href="{{ url_for('attendance') }}" class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Attendance</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('votes') }}" class="nav-item">
+                <span class="nav-icon">🗳️</span>
+                <span class="nav-text">Vote</span>
+            </a>
+            <a href="{{ url_for('announcement') }}" class="nav-item">
+                <span class="nav-icon">📢</span>
+                <span class="nav-text">Announcement</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-logout">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <span>🚪</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="navbar-left">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <span class="navbar-title">Fees</span>
+            </div>
+            <div class="navbar-right">
+                <div class="user-badge">
+                    👤 {{ name }}
+                    <span style="color:var(--secondary); font-size:0.8rem;">
+                        ({{ role|title }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:350px;"></div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+
+            <!-- ══════════════════════════════
+                 STUDENT VIEW
+            ══════════════════════════════ -->
+            {% if role == 'student' %}
+
+            <div class="welcome-card">
+                <h2>💰 My Fees</h2>
+                <p>Fee status overview</p>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card teal">
+                    <div class="info-card-icon">💰</div>
+                    <div class="info-card-title">TOTAL FEE</div>
+                    <div class="info-card-value">${{ students[0].get('Total_Fee', 0) if students else 0 }}</div>
+                </div>
+                <div class="info-card green">
+                    <div class="info-card-icon">✅</div>
+                    <div class="info-card-title">AMOUNT PAID</div>
+                    <div class="info-card-value" style="color:var(--success);">
+                        ${{ students[0].get('Amount_Paid', 0) if students else 0 }}
+                    </div>
+                </div>
+                <div class="info-card" style="border-top-color:var(--error);">
+                    <div class="info-card-icon">⚠️</div>
+                    <div class="info-card-title">BALANCE</div>
+                    <div class="info-card-value" style="color:var(--error);">
+                        ${{ students[0].get('Balance', 0) if students else 0 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            {% if students %}
+            {% set total = students[0].get('Total_Fee', 0)|float %}
+            {% set paid  = students[0].get('Amount_Paid', 0)|float %}
+            {% set pct   = ((paid / total) * 100)|round(1) if total > 0 else 0 %}
+            <div class="card">
+                <div class="card-title">💰 Payment Progress</div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:var(--subtext);">Paid: ${{ paid }}</span>
+                    <span style="color:var(--subtext);">Total: ${{ total }}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" data-width="{{ pct }}" style="width:0%"></div>
+                </div>
+                <div style="text-align:center; margin-top:8px; font-weight:700; color:var(--primary);">
+                    {{ pct }}% Paid
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ══════════════════════════════
+                 ADMIN / FEE ADMIN VIEW
+            ══════════════════════════════ -->
+            {% else %}
+
+            <div class="welcome-card">
+                <h2>💰 Fee Management</h2>
+                <p>Manage student fees and payments</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-icon">👨‍🎓</div>
+                    <div class="stat-number">{{ students|length }}</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card teal">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-number">
+                        {{ students|selectattr('Balance', 'equalto', 0)|list|length }}
+                    </div>
+                    <div class="stat-label">Fully Paid</div>
+                </div>
+                <div class="stat-card gold">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-number">
+                        {{ students|rejectattr('Balance', 'equalto', 0)|list|length }}
+                    </div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="card">
+                <form method="GET">
+                    <div class="search-box">
+                        <input type="text" name="search"
+                               class="search-input"
+                               placeholder="🔍 Search by ID or Name..."
+                               value="{{ search }}">
+                        <button type="submit" class="btn btn-primary">
+                            🔍 Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Fees Table -->
+            <div class="card">
+                <div class="card-title">💰 Student Fees</div>
+                <div class="table-container">
+                    <table id="feesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Class</th>
+                                <th>Total Fee</th>
+                                <th>Paid</th>
+                                <th>Balance</th>
+                                <th>Status</th>
+                                {% if role in ['admin', 'fee'] %}
+                                <th>Action</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            {% if student.get('ID') and student.get('Name') %}
+                            <tr>
+                                <td>
+                                    <span class="badge badge-primary">
+                                        {{ student.get('ID', '') }}
+                                    </span>
+                                </td>
+                                <td><strong>{{ student.get('Name', '') }}</strong></td>
+                                <td>Class {{ student.get('Class', '') }}</td>
+                                <td>${{ student.get('Total_Fee', 0) }}</td>
+                                <td style="color:var(--success); font-weight:600;">
+                                    ${{ student.get('Amount_Paid', 0) }}
+                                </td>
+                                <td>
+                                    {% set bal = student.get('Balance', 0)|float %}
+                                    <span style="color:{% if bal > 0 %}var(--error){% else %}var(--success){% endif %}; font-weight:700;">
+                                        ${{ bal }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% set bal = student.get('Balance', 0)|float %}
+                                    {% if bal <= 0 %}
+                                    <span class="badge badge-success">✅ Paid</span>
+                                    {% elif bal < student.get('Total_Fee', 0)|float %}
+                                    <span class="badge badge-warning">⚠️ Partial</span>
+                                    {% else %}
+                                    <span class="badge badge-danger">❌ Unpaid</span>
+                                    {% endif %}
+                                </td>
+                                {% if role in ['admin', 'fee'] %}
+                                <td>
+                                    <button class="btn btn-success"
+                                            style="padding:6px 14px; font-size:0.8rem;"
+                                            onclick="openPayModal('{{ student.get('ID', '') }}', '{{ student.get('Name', '') }}', {{ student.get('Balance', 0) }})">
+                                        💰 Pay
+                                    </button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {% if not students %}
+                    <div style="text-align:center; padding:40px; color:var(--subtext);">
+                        <div style="font-size:3rem;">💰</div>
+                        <p>No students found</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+        <!-- End Page Content -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- ══════════════════════════════
+         PAY MODAL
+    ══════════════════════════════ -->
+    {% if role in ['admin', 'fee'] %}
+    <div class="modal-overlay" id="payModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-title">💰 Record Payment</div>
+
+            <div style="background:var(--background); border-radius:var(--radius-sm); padding:15px; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:var(--subtext);">Student:</span>
+                    <strong id="payStudentName">-</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="color:var(--subtext);">Balance:</span>
+                    <strong id="payBalance" style="color:var(--error);">-</strong>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Amount to Pay ($)</label>
+                <input type="number" class="form-control" id="payAmount"
+                       placeholder="Enter amount" min="1">
+            </div>
+
+            <div id="payResult" style="margin-bottom:15px;"></div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn btn-danger" onclick="closeModal('payModal')">
+                    ✖ Cancel
+                </button>
+                <button class="btn btn-success" onclick="submitPayment()">
+                    💰 Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+
+        let currentStudentId = '';
+
+        // ── OPEN PAY MODAL ──
+        function openPayModal(studentId, studentName, balance) {
+            currentStudentId = studentId;
+            document.getElementById('payStudentName').textContent = studentName;
+            document.getElementById('payBalance').textContent = '$' + balance;
+            document.getElementById('payAmount').value = '';
+            document.getElementById('payResult').innerHTML = '';
+            openModal('payModal');
+        }
+
+        // ── SUBMIT PAYMENT ──
+        function submitPayment() {
+            const amount = parseFloat(document.getElementById('payAmount').value);
+
+            if (!amount || amount <= 0) {
+                document.getElementById('payResult').innerHTML =
+                    '<div class="alert alert-error">❌ Please enter a valid amount!</div>';
+                return;
+            }
+
+            const btn = event.target;
+            btn.innerHTML = '<span class="spinner"></span> Processing...';
+            btn.disabled = true;
+
+            fetch('/pay_fee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: currentStudentId,
+                    amount: amount
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = '💰 Confirm Payment';
+                btn.disabled = false;
+
+                if (data.success) {
+                    document.getElementById('payResult').innerHTML =
+                        `<div class="alert alert-success">
+                            ✅ Payment recorded!<br>
+                            New Balance: <strong>$${data.new_balance}</strong>
+                        </div>`;
+                    setTimeout(() => {
+                        closeModal('payModal');
+                        location.reload();
+                    }, 1500);
+                } else {
+                    document.getElementById('payResult').innerHTML =
+                        `<div class="alert alert-error">❌ ${data.message}</div>`;
+                }
+            })
+            .catch(() => {
+                btn.innerHTML = '💰 Confirm Payment';
+                btn.disabled = false;
+                document.getElementById('payResult').innerHTML =
+                    '<div class="alert alert-error">❌ Connection error!</div>';
+            });
+        }
+
+        // ── SHOW ALERT ──
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+    </script>
+
+</body>
+</html>

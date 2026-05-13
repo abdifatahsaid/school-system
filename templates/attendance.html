@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance - School Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="Logo" class="sidebar-logo">
+            <span class="sidebar-title">School System</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="{{ url_for('grades') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Examinations</span>
+            </a>
+            <a href="{{ url_for('fees') }}" class="nav-item">
+                <span class="nav-icon">💰</span>
+                <span class="nav-text">Fees</span>
+            </a>
+            <a href="{{ url_for('attendance') }}" class="nav-item active">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Attendance</span>
+            </a>
+            <a href="{{ url_for('votes') }}" class="nav-item">
+                <span class="nav-icon">🗳️</span>
+                <span class="nav-text">Vote</span>
+            </a>
+            <a href="{{ url_for('announcement') }}" class="nav-item">
+                <span class="nav-icon">📢</span>
+                <span class="nav-text">Announcement</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-logout">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <span>🚪</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="navbar-left">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <span class="navbar-title">Attendance</span>
+            </div>
+            <div class="navbar-right">
+                <div class="user-badge">
+                    👤 {{ name }}
+                    <span style="color:var(--secondary); font-size:0.8rem;">
+                        ({{ role|title }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:350px;"></div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+
+            <!-- ══════════════════════════════
+                 STUDENT VIEW (Read Only)
+            ══════════════════════════════ -->
+            {% if role == 'student' %}
+
+            <div class="welcome-card">
+                <h2>📋 My Attendance</h2>
+                <p>{{ today }}</p>
+            </div>
+
+            {% if students %}
+            <div class="card">
+                <div class="card-title">📋 Attendance History</div>
+
+                <!-- Stats -->
+                <div class="stats-grid" style="margin-bottom:20px;">
+                    <div class="stat-card green">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-number">
+                            {{ students|selectattr('Status', 'equalto', 'Present')|list|length }}
+                        </div>
+                        <div class="stat-label">Present Days</div>
+                    </div>
+                    <div class="stat-card" style="border-top:4px solid var(--error);">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-number">
+                            {{ students|selectattr('Status', 'equalto', 'Absent')|list|length }}
+                        </div>
+                        <div class="stat-label">Absent Days</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-number">
+                            {% set total = students|length %}
+                            {% set present = students|selectattr('Status', 'equalto', 'Present')|list|length %}
+                            {% if total > 0 %}
+                                {{ ((present / total) * 100)|round(1) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">Attendance Rate</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in students %}
+                            <tr>
+                                <td>{{ record.get('Date', '') }}</td>
+                                <td>
+                                    {% if record.get('Status') == 'Present' %}
+                                    <span class="badge badge-success">✅ Present</span>
+                                    {% else %}
+                                    <span class="badge badge-danger">❌ Absent</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="card" style="text-align:center; padding:40px;">
+                <div style="font-size:3rem;">📋</div>
+                <p style="color:var(--subtext);">No attendance records found</p>
+            </div>
+            {% endif %}
+
+            <!-- ══════════════════════════════
+                 ADMIN / ATTENDANCE VIEW
+            ══════════════════════════════ -->
+            {% else %}
+
+            <div class="welcome-card">
+                <h2>📋 Take Attendance</h2>
+                <p>{{ today }}</p>
+            </div>
+
+            <!-- Class Selection -->
+            {% if not selected_class %}
+            <div class="card">
+                <div class="card-title">📚 Select Class</div>
+                <p style="color:var(--subtext); margin-bottom:20px;">
+                    Please select a class to take attendance
+                </p>
+                <div class="action-buttons">
+                    <a href="{{ url_for('attendance') }}?class=1" class="btn btn-primary">
+                        📚 Class 1
+                    </a>
+                    <a href="{{ url_for('attendance') }}?class=2" class="btn btn-primary">
+                        📚 Class 2
+                    </a>
+                    <a href="{{ url_for('attendance') }}?class=3" class="btn btn-primary">
+                        📚 Class 3
+                    </a>
+                    <a href="{{ url_for('attendance') }}?class=4" class="btn btn-primary">
+                        📚 Class 4
+                    </a>
+                </div>
+            </div>
+
+            {% else %}
+
+            <!-- Already Taken Warning -->
+            {% if already_taken %}
+            <div class="alert alert-warning">
+                ⚠️ Attendance for Class {{ selected_class }} has already been taken today!
+            </div>
+            {% endif %}
+
+            <!-- Search -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <strong style="color:var(--dark);">
+                            📚 Class {{ selected_class }} — {{ students|length }} Students
+                        </strong>
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-success" id="selectAllPresent"
+                                onclick="markAll('Present')">
+                            ✅ All Present
+                        </button>
+                        <button class="btn btn-danger" id="selectAllAbsent"
+                                onclick="markAll('Absent')">
+                            ❌ All Absent
+                        </button>
+                        <a href="{{ url_for('attendance') }}" class="btn btn-primary">
+                            ← Change Class
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Attendance List -->
+            {% if students %}
+            <div class="card">
+                <div class="card-title">
+                    👨‍🎓 Class {{ selected_class }} Students
+                    <span style="font-size:0.8rem; color:var(--subtext);">
+                        {{ today }}
+                    </span>
+                </div>
+
+                <div class="table-container">
+                    <table id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th style="text-align:center;">✅ Present</th>
+                                <th style="text-align:center;">❌ Absent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            {% if student.get('ID') and student.get('Name') %}
+                            <tr id="row-{{ student.get('ID') }}">
+                                <td style="color:var(--subtext);">{{ loop.index }}</td>
+                                <td>
+                                    <span class="badge badge-primary">
+                                        {{ student.get('ID', '') }}
+                                    </span>
+                                </td>
+                                <td><strong>{{ student.get('Name', '') }}</strong></td>
+                                <td style="text-align:center;">
+                                    <input type="radio"
+                                           name="status_{{ student.get('ID') }}"
+                                           value="Present"
+                                           class="status-present"
+                                           data-id="{{ student.get('ID') }}"
+                                           data-name="{{ student.get('Name') }}"
+                                           style="width:20px; height:20px; cursor:pointer; accent-color:var(--success);"
+                                           {% if already_taken %}disabled{% endif %}>
+                                </td>
+                                <td style="text-align:center;">
+                                    <input type="radio"
+                                           name="status_{{ student.get('ID') }}"
+                                           value="Absent"
+                                           class="status-absent"
+                                           data-id="{{ student.get('ID') }}"
+                                           data-name="{{ student.get('Name') }}"
+                                           style="width:20px; height:20px; cursor:pointer; accent-color:var(--error);"
+                                           {% if already_taken %}disabled{% endif %}>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if not already_taken %}
+                <div style="margin-top:25px; text-align:center;">
+                    <button class="btn btn-success"
+                            style="padding:15px 40px; font-size:1rem;"
+                            onclick="submitAttendance()">
+                        💾 Submit Attendance
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            {% else %}
+            <div class="card" style="text-align:center; padding:40px;">
+                <div style="font-size:3rem;">👨‍🎓</div>
+                <p style="color:var(--subtext);">No students in Class {{ selected_class }}</p>
+            </div>
+            {% endif %}
+
+            {% endif %}
+            {% endif %}
+
+        </div>
+        <!-- End Page Content -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+
+        const selectedClass = "{{ selected_class }}";
+
+        // ── MARK ALL ──
+        function markAll(status) {
+            document.querySelectorAll(
+                status === 'Present' ? '.status-present' : '.status-absent'
+            ).forEach(radio => radio.checked = true);
+        }
+
+        // ── SUBMIT ATTENDANCE ──
+        function submitAttendance() {
+            const attendanceData = [];
+            const rows = document.querySelectorAll('#attendanceTable tbody tr');
+            let allMarked = true;
+
+            rows.forEach(row => {
+                const presentRadio = row.querySelector('.status-present');
+                const absentRadio  = row.querySelector('.status-absent');
+
+                if (!presentRadio.checked && !absentRadio.checked) {
+                    allMarked = false;
+                    row.style.background = '#fff3cd';
+                } else {
+                    row.style.background = '';
+                    attendanceData.push({
+                        student_id:   presentRadio.dataset.id,
+                        student_name: presentRadio.dataset.name,
+                        status: presentRadio.checked ? 'Present' : 'Absent'
+                    });
+                }
+            });
+
+            if (!allMarked) {
+                showAlert('Please mark all students!', 'error');
+                return;
+            }
+
+            const btn = event.target;
+            btn.innerHTML = '<span class="spinner"></span> Saving...';
+            btn.disabled = true;
+
+            fetch('/submit_attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    class: selectedClass,
+                    attendance: attendanceData
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('✅ Attendance saved successfully!', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert(`❌ ${data.message}`, 'error');
+                    btn.innerHTML = '💾 Submit Attendance';
+                    btn.disabled = false;
+                }
+            })
+            .catch(() => {
+                showAlert('❌ Connection error!', 'error');
+                btn.innerHTML = '💾 Submit Attendance';
+                btn.disabled = false;
+            });
+        }
+
+        // ── SHOW ALERT ──
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcement - School Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="Logo" class="sidebar-logo">
+            <span class="sidebar-title">School System</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="{{ url_for('grades') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Examinations</span>
+            </a>
+            <a href="{{ url_for('fees') }}" class="nav-item">
+                <span class="nav-icon">💰</span>
+                <span class="nav-text">Fees</span>
+            </a>
+            {% if role in ['admin', 'attendance'] %}
+            <a href="{{ url_for('attendance') }}" class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Attendance</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('votes') }}" class="nav-item">
+                <span class="nav-icon">🗳️</span>
+                <span class="nav-text">Vote</span>
+            </a>
+            <a href="{{ url_for('announcement') }}" class="nav-item active">
+                <span class="nav-icon">📢</span>
+                <span class="nav-text">Announcement</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-logout">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <span>🚪</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="navbar-left">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <span class="navbar-title">Announcement</span>
+            </div>
+            <div class="navbar-right">
+                <div class="user-badge">
+                    👤 {{ name }}
+                    <span style="color:var(--secondary); font-size:0.8rem;">
+                        ({{ role|title }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:350px;"></div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+
+            <!-- Welcome Card -->
+            <div class="welcome-card">
+                <h2>📢 Announcements</h2>
+                <p>School notices and important updates</p>
+            </div>
+
+            <!-- ══════════════════════════════
+                 ADMIN VIEW - Can Edit
+            ══════════════════════════════ -->
+            {% if role == 'admin' %}
+
+            <div class="card">
+                <div class="card-title">✏️ Write Announcement</div>
+                <p style="color:var(--subtext); margin-bottom:15px; font-size:0.9rem;">
+                    Write school announcements, holidays, exam schedules and more.
+                    All students and staff will be able to see this.
+                </p>
+
+                <textarea 
+                    class="announcement-box"
+                    id="announcementText"
+                    placeholder="Write your announcement here...&#10;&#10;Example:&#10;📅 Exam Schedule: Term 1 exams will begin on June 1st, 2026.&#10;🏖️ Holiday Notice: School will be closed on May 20th.&#10;📚 Important: All students must submit assignments by Friday."
+                    rows="10">{{ announcement }}</textarea>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+                    <span style="color:var(--subtext); font-size:0.85rem;">
+                        Last updated: <span id="lastUpdated">-</span>
+                    </span>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-danger" onclick="clearAnnouncement()">
+                            🗑️ Clear
+                        </button>
+                        <button class="btn btn-success" onclick="saveAnnouncement()">
+                            💾 Save Announcement
+                        </button>
+                    </div>
+                </div>
+
+                <div id="saveResult" style="margin-top:15px;"></div>
+            </div>
+
+            <!-- Preview -->
+            {% if announcement %}
+            <div class="card">
+                <div class="card-title">👁️ Preview</div>
+                <div style="background:var(--background); border-radius:var(--radius-sm); padding:20px; border-left:4px solid var(--primary); white-space:pre-line; line-height:1.8; color:var(--text);">
+                    {{ announcement }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ══════════════════════════════
+                 STUDENT / STAFF VIEW - Read Only
+            ══════════════════════════════ -->
+            {% else %}
+
+            {% if announcement %}
+            <div class="card">
+                <div class="card-title">📢 Latest Announcement</div>
+                <div style="background:linear-gradient(135deg, #e3f2fd, #e8f5e9); border-radius:var(--radius-sm); padding:25px; border-left:4px solid var(--primary); position:relative;">
+
+                    <!-- Icon -->
+                    <div style="position:absolute; top:15px; right:15px; font-size:2rem; opacity:0.3;">
+                        📢
+                    </div>
+
+                    <!-- Content -->
+                    <div style="white-space:pre-line; line-height:1.9; color:var(--text); font-size:0.95rem;">
+                        {{ announcement }}
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="card" style="text-align:center; padding:60px;">
+                <div style="font-size:4rem; margin-bottom:15px;">📢</div>
+                <h3 style="color:var(--dark); margin-bottom:10px;">
+                    No Announcements Yet
+                </h3>
+                <p style="color:var(--subtext);">
+                    There are no announcements at this time.<br>
+                    Please check back later.
+                </p>
+            </div>
+            {% endif %}
+
+            {% endif %}
+
+        </div>
+        <!-- End Page Content -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+
+        // ── SAVE ANNOUNCEMENT ──
+        function saveAnnouncement() {
+            const text = document.getElementById('announcementText').value.trim();
+
+            if (!text) {
+                document.getElementById('saveResult').innerHTML =
+                    '<div class="alert alert-error">❌ Please write an announcement first!</div>';
+                return;
+            }
+
+            const btn = event.target;
+            btn.innerHTML = '<span class="spinner"></span> Saving...';
+            btn.disabled  = true;
+
+            fetch('/save_announcement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = '💾 Save Announcement';
+                btn.disabled  = false;
+
+                if (data.success) {
+                    document.getElementById('saveResult').innerHTML =
+                        '<div class="alert alert-success">✅ Announcement saved successfully!</div>';
+                    document.getElementById('lastUpdated').textContent =
+                        new Date().toLocaleString();
+                    setTimeout(() => {
+                        document.getElementById('saveResult').innerHTML = '';
+                        location.reload();
+                    }, 2000);
+                } else {
+                    document.getElementById('saveResult').innerHTML =
+                        `<div class="alert alert-error">❌ ${data.message}</div>`;
+                }
+            })
+            .catch(() => {
+                btn.innerHTML = '💾 Save Announcement';
+                btn.disabled  = false;
+                document.getElementById('saveResult').innerHTML =
+                    '<div class="alert alert-error">❌ Connection error!</div>';
+            });
+        }
+
+        // ── CLEAR ANNOUNCEMENT ──
+        function clearAnnouncement() {
+            if (!confirm('Are you sure you want to clear the announcement?')) return;
+
+            document.getElementById('announcementText').value = '';
+
+            fetch('/save_announcement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: '' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('✅ Announcement cleared!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+        }
+
+        // ── SHOW ALERT ──
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            const alert     = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        // ── SET LAST UPDATED ──
+        document.addEventListener('DOMContentLoaded', () => {
+            const lastUpdated = document.getElementById('lastUpdated');
+            if (lastUpdated) {
+                lastUpdated.textContent = new Date().toLocaleString();
+            }
+        });
+
+    </script>
+
+</body>
+</html>

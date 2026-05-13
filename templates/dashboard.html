@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - School Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                 alt="Logo" class="sidebar-logo">
+            <span class="sidebar-title">School System</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+
+            <a href="{{ url_for('grades') }}" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Examinations</span>
+            </a>
+
+            <a href="{{ url_for('fees') }}" class="nav-item">
+                <span class="nav-icon">💰</span>
+                <span class="nav-text">Fees</span>
+            </a>
+
+            {% if role in ['admin', 'attendance'] %}
+            <a href="{{ url_for('attendance') }}" class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Attendance</span>
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('votes') }}" class="nav-item">
+                <span class="nav-icon">🗳️</span>
+                <span class="nav-text">Vote</span>
+            </a>
+
+            <a href="{{ url_for('announcement') }}" class="nav-item">
+                <span class="nav-icon">📢</span>
+                <span class="nav-text">Announcement</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-logout">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <span>🚪</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="navbar-left">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <span class="navbar-title">School Management System</span>
+            </div>
+            <div class="navbar-right">
+                <div class="user-badge">
+                    👤 {{ name }} 
+                    <span style="color: var(--secondary); font-size:0.8rem;">
+                        ({{ role|title }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:350px;"></div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+
+            <!-- ══════════════════════════════
+                 ADMIN DASHBOARD
+            ══════════════════════════════ -->
+            {% if role == 'admin' %}
+
+            <!-- Welcome Card -->
+            <div class="welcome-card">
+                <h2>👋 Welcome, Admin!</h2>
+                <p>School Management System — {{ now }}</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-icon">👨‍🎓</div>
+                    <div class="stat-number" data-target="{{ total_students }}">{{ total_students }}</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card teal">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-number">${{ total_collected }}</div>
+                    <div class="stat-label">Fees Collected</div>
+                </div>
+                <div class="stat-card gold">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-number">{{ attendance_rate }}%</div>
+                    <div class="stat-label">Attendance Rate</div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card">
+                <div class="card-title">👨‍🎓 Student Management</div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="openModal('searchModal')">
+                        🔍 Search Student
+                    </button>
+                    <button class="btn btn-success" onclick="openModal('addModal')">
+                        ➕ Add Student
+                    </button>
+                    <button class="btn btn-danger" onclick="openModal('deleteModal')">
+                        🗑️ Delete Student
+                    </button>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════
+                 FEE ADMIN DASHBOARD
+            ══════════════════════════════ -->
+            {% elif role == 'fee' %}
+
+            <div class="welcome-card">
+                <h2>👋 Welcome, Fee Admin!</h2>
+                <p>Manage student fees</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💰 Fee Management</div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="openModal('searchModal')">
+                        🔍 Search Student
+                    </button>
+                    <a href="{{ url_for('fees') }}" class="btn btn-success">
+                        💰 Manage Fees
+                    </a>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════
+                 ATTENDANCE DASHBOARD
+            ══════════════════════════════ -->
+            {% elif role == 'attendance' %}
+
+            <div class="welcome-card">
+                <h2>👋 Welcome, Attendance Admin!</h2>
+                <p>Take daily attendance</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📋 Attendance</div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="openModal('searchModal')">
+                        🔍 Search Student
+                    </button>
+                    <a href="{{ url_for('attendance') }}" class="btn btn-success">
+                        📋 Take Attendance
+                    </a>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════
+                 GRADES DASHBOARD
+            ══════════════════════════════ -->
+            {% elif role == 'grades' %}
+
+            <div class="welcome-card">
+                <h2>👋 Welcome, Grades Admin!</h2>
+                <p>Manage student grades</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📊 Grades</div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="openModal('searchModal')">
+                        🔍 Search Student
+                    </button>
+                    <a href="{{ url_for('grades') }}" class="btn btn-success">
+                        📊 Manage Grades
+                    </a>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════
+                 STUDENT DASHBOARD
+            ══════════════════════════════ -->
+            {% elif role == 'student' %}
+
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div style="position:relative; display:inline-block;">
+                    <img src="{{ url_for('static', filename='images/students/' + session.get('student_id', '') + '.jpg') if session.get('student_id') else url_for('static', filename='images/logo.png') }}"
+                         alt="Profile" class="profile-photo" id="profilePhoto"
+                         onerror="this.src='{{ url_for('static', filename='images/logo.png') }}'">
+                    <div style="position:absolute; bottom:5px; right:5px; background:var(--accent); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.8rem;"
+                         onclick="document.getElementById('photoInput').click()">
+                        📷
+                    </div>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" style="display:none">
+                <h2 style="margin-top:15px;">{{ student.get('Name', name) }}</h2>
+                <p>ID: {{ student.get('ID', '') }} | Class: {{ student.get('Class', '') }}</p>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="info-grid">
+                <!-- Fees -->
+                <div class="info-card teal">
+                    <div class="info-card-icon">💰</div>
+                    <div class="info-card-title">FEES</div>
+                    <div style="font-size:0.9rem; color:var(--text);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span>Total:</span>
+                            <strong>${{ student.get('Total_Fee', 0) }}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span>Paid:</span>
+                            <strong style="color:var(--success);">${{ student.get('Amount_Paid', 0) }}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Balance:</span>
+                            <strong style="color:{% if student.get('Balance', 0)|float > 0 %}var(--error){% else %}var(--success){% endif %};">
+                                ${{ student.get('Balance', 0) }}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="info-card">
+                    <div class="info-card-icon">📚</div>
+                    <div class="info-card-title">QUICK ACCESS</div>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                        <a href="{{ url_for('grades') }}" class="btn btn-primary" style="font-size:0.85rem; padding:8px 16px;">
+                            📊 My Grades
+                        </a>
+                        <a href="{{ url_for('attendance') }}" class="btn btn-success" style="font-size:0.85rem; padding:8px 16px;">
+                            📋 My Attendance
+                        </a>
+                        <a href="{{ url_for('votes') }}" class="btn btn-gold" style="font-size:0.85rem; padding:8px 16px;">
+                            🗳️ Vote
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {% endif %}
+
+        </div>
+        <!-- End Page Content -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- ══════════════════════════════
+         MODALS
+    ══════════════════════════════ -->
+
+    <!-- Search Modal -->
+    <div class="modal-overlay" id="searchModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-title">🔍 Search Student</div>
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput"
+                       placeholder="Search by ID, Name or Class..."
+                       oninput="liveSearch(this.value)">
+            </div>
+            <div id="searchResults" style="max-height:350px; overflow-y:auto;">
+                <p style="color:var(--subtext); text-align:center; padding:20px;">
+                    Type to search...
+                </p>
+            </div>
+            <div style="margin-top:15px; text-align:right;">
+                <button class="btn btn-danger" onclick="closeModal('searchModal')">
+                    ✖ Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    {% if role == 'admin' %}
+    <div class="modal-overlay" id="addModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-title">➕ Add New Student</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" class="form-control" id="addName" placeholder="Student full name">
+                </div>
+                <div class="form-group">
+                    <label>Class</label>
+                    <select class="form-control" id="addClass">
+                        <option value="1">Class 1</option>
+                        <option value="2">Class 2</option>
+                        <option value="3">Class 3</option>
+                        <option value="4">Class 4</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="text" class="form-control" id="addPhone" placeholder="Phone number">
+                </div>
+                <div class="form-group">
+                    <label>Total Fee ($)</label>
+                    <input type="number" class="form-control" id="addFee" placeholder="0" value="500">
+                </div>
+            </div>
+            <div id="addResult" style="margin-bottom:15px;"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn btn-danger" onclick="closeModal('addModal')">✖ Cancel</button>
+                <button class="btn btn-success" onclick="addStudent()">➕ Add Student</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal-overlay" id="deleteModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-title">🗑️ Delete Student</div>
+            <div class="search-box">
+                <input type="text" class="search-input" id="deleteSearchInput"
+                       placeholder="Search student to delete..."
+                       oninput="deleteSearch(this.value)">
+            </div>
+            <div id="deleteResults" style="max-height:350px; overflow-y:auto;">
+                <p style="color:var(--subtext); text-align:center; padding:20px;">
+                    Type to search...
+                </p>
+            </div>
+            <div style="margin-top:15px; text-align:right;">
+                <button class="btn btn-danger" onclick="closeModal('deleteModal')">✖ Close</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+  function liveSearch(query) {
+            if (query.length < 1) {
+                document.getElementById('searchResults').innerHTML =
+                    '<p style="color:var(--subtext); text-align:center; padding:20px;">Type to search...</p>';
+                return;
+            }
+
+            const role = "{{ role }}";
+
+            fetch(`/search_student?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('searchResults');
+                    if (data.students.length === 0) {
+                        container.innerHTML = '<p style="color:var(--subtext); text-align:center; padding:20px;">No students found</p>';
+                        return;
+                    }
+
+                    let html = '<table style="width:100%; border-collapse:collapse;">';
+                    html += '<thead><tr style="background:var(--primary); color:white;">';
+                    html += '<th style="padding:8px; font-size:0.82rem;">ID</th>';
+                    html += '<th style="font-size:0.82rem;">Name</th>';
+                    html += '<th style="font-size:0.82rem;">Class</th>';
+                    html += '<th style="font-size:0.82rem;">Action</th>';
+                    html += '</tr></thead><tbody>';
+
+                    data.students.forEach(s => {
+                        let buttons = '';
+
+                        if (role === 'admin') {
+                            buttons = `
+                                <a href="/fees?search=${s.ID}" class="btn btn-success" style="padding:4px 8px; font-size:0.72rem; margin:1px;">💰 Fees</a>
+                                <a href="/attendance?class=${s.Class}" class="btn btn-primary" style="padding:4px 8px; font-size:0.72rem; margin:1px;">📋 Att.</a>
+                                <a href="/grades?search=${s.ID}" class="btn btn-gold" style="padding:4px 8px; font-size:0.72rem; margin:1px;">📊 Grades</a>`;
+                        } else if (role === 'fee') {
+                            buttons = `<a href="/fees?search=${s.ID}" class="btn btn-success" style="padding:4px 8px; font-size:0.72rem;">💰 Fees</a>`;
+                        } else if (role === 'attendance') {
+                            buttons = `<a href="/attendance?class=${s.Class}" class="btn btn-primary" style="padding:4px 8px; font-size:0.72rem;">📋 Attendance</a>`;
+                        } else if (role === 'grades') {
+                            buttons = `<a href="/grades?search=${s.ID}" class="btn btn-gold" style="padding:4px 8px; font-size:0.72rem;">📊 Grades</a>`;
+                        }
+
+                        html += `
+                            <tr style="border-bottom:1px solid #f0f0f0;">
+                                <td style="padding:8px; font-size:0.82rem;">
+                                    <span class="badge badge-primary">${s.ID || ''}</span>
+                                </td>
+                                <td style="font-size:0.82rem;">
+                                    <strong style="cursor:pointer; color:var(--primary);"
+                                            onclick="viewStudentDetail('${s.ID}','${s.Name}','${s.Class}','${s.Phone || ''}','${s.Total_Fee || 0}','${s.Amount_Paid || 0}','${s.Balance || 0}')">
+                                        ${s.Name || ''}
+                                    </strong>
+                                </td>
+                                <td style="font-size:0.82rem;">Class ${s.Class || ''}</td>
+                                <td>
+                                    <div style="display:flex; flex-wrap:wrap; gap:3px;">
+                                        ${buttons}
+                                    </div>
+                                </td>
+                            </tr>`;
+                    });
+
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                });
+        }
+
+        // ── VIEW STUDENT DETAIL ──
+        function viewStudentDetail(id, name, cls, phone, totalFee, paid, balance) {
+            document.getElementById('searchResults').innerHTML = `
+                <div style="background:var(--background); border-radius:var(--radius-sm); padding:20px;">
+                    <button onclick="document.getElementById('searchInput').dispatchEvent(new Event('input'))"
+                            class="btn btn-primary" style="padding:6px 12px; font-size:0.8rem; margin-bottom:15px;">
+                        ← Back
+                    </button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">ID</p>
+                            <p style="font-weight:700; color:var(--primary);">${id}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">Name</p>
+                            <p style="font-weight:700;">${name}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">Class</p>
+                            <p style="font-weight:700;">Class ${cls}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">Phone</p>
+                            <p style="font-weight:700;">${phone || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">Total Fee</p>
+                            <p style="font-weight:700;">$${totalFee}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">Paid</p>
+                            <p style="font-weight:700; color:var(--success);">$${paid}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--subtext); font-size:0.8rem;">Balance</p>
+                            <p style="font-weight:700; color:var(--error);">$${balance}</p>
+                        </div>
+                    </div>
+                </div>`;
+        }
+        
+        // ── DELETE SEARCH ──
+        function deleteSearch(query) {
+            if (query.length < 1) {
+                document.getElementById('deleteResults').innerHTML =
+                    '<p style="color:var(--subtext); text-align:center; padding:20px;">Type to search...</p>';
+                return;
+            }
+
+            fetch(`/search_student?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('deleteResults');
+                    if (data.students.length === 0) {
+                        container.innerHTML = '<p style="color:var(--subtext); text-align:center; padding:20px;">No students found</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.students.forEach(s => {
+                        html += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #f0f0f0;">
+                                <div>
+                                    <strong>${s.Name || ''}</strong>
+                                    <span style="color:var(--subtext); font-size:0.85rem; margin-left:10px;">${s.ID || ''} | Class ${s.Class || ''}</span>
+                                </div>
+                                <button class="btn btn-danger" style="padding:6px 14px; font-size:0.8rem;"
+                                        onclick="confirmDelete('${s.ID}', '${s.Name}')">
+                                    🗑️ Delete
+                                </button>
+                            </div>`;
+                    });
+
+                    container.innerHTML = html;
+                });
+        }
+
+        // ── ADD STUDENT ──
+        function addStudent() {
+            const name  = document.getElementById('addName').value.trim();
+            const cls   = document.getElementById('addClass').value;
+            const phone = document.getElementById('addPhone').value.trim();
+            const fee   = document.getElementById('addFee').value;
+
+            if (!name || !cls) {
+                document.getElementById('addResult').innerHTML =
+                    '<div class="alert alert-error">❌ Please fill all required fields!</div>';
+                return;
+            }
+
+            const btn = event.target;
+            btn.innerHTML = '<span class="spinner"></span> Adding...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('class', cls);
+            formData.append('phone', phone);
+            formData.append('total_fee', fee);
+
+            fetch('/add_student', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    btn.innerHTML = '➕ Add Student';
+                    btn.disabled = false;
+
+                    if (data.success) {
+                        document.getElementById('addResult').innerHTML =
+                            `<div class="alert alert-success">✅ ${data.message}</div>`;
+                        document.getElementById('addName').value  = '';
+                        document.getElementById('addPhone').value = '';
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        document.getElementById('addResult').innerHTML =
+                            `<div class="alert alert-error">❌ ${data.message}</div>`;
+                    }
+                });
+        }
+
+        // ── CURRENT DATE ──
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateEl = document.querySelector('.welcome-card p');
+            if (dateEl) {
+                const now = new Date();
+                dateEl.textContent = now.toLocaleDateString('en-US', {
+                    weekday: 'long', year: 'numeric',
+                    month: 'long', day: 'numeric'
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

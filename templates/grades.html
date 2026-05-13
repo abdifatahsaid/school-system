@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grades - School Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+</head>
+<body class="dashboard-body">
+
+    <!-- ── SIDEBAR ── -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="Logo" class="sidebar-logo">
+            <span class="sidebar-title">School System</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="{{ url_for('grades') }}" class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Examinations</span>
+            </a>
+            <a href="{{ url_for('fees') }}" class="nav-item">
+                <span class="nav-icon">💰</span>
+                <span class="nav-text">Fees</span>
+            </a>
+            {% if role in ['admin', 'attendance'] %}
+            <a href="{{ url_for('attendance') }}" class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span class="nav-text">Attendance</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('votes') }}" class="nav-item">
+                <span class="nav-icon">🗳️</span>
+                <span class="nav-text">Vote</span>
+            </a>
+            <a href="{{ url_for('announcement') }}" class="nav-item">
+                <span class="nav-icon">📢</span>
+                <span class="nav-text">Announcement</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-logout">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <span>🚪</span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main-content" id="mainContent">
+
+        <!-- Navbar -->
+        <div class="navbar">
+            <div class="navbar-left">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <span class="navbar-title">Examinations</span>
+            </div>
+            <div class="navbar-right">
+                <div class="user-badge">
+                    👤 {{ name }}
+                    <span style="color:var(--secondary); font-size:0.8rem;">
+                        ({{ role|title }})
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Container -->
+        <div id="alertContainer" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:350px;"></div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+
+            <!-- ══════════════════════════════
+                 STUDENT VIEW
+            ══════════════════════════════ -->
+            {% if role == 'student' %}
+
+            <div class="welcome-card">
+                <h2>📊 My Examinations</h2>
+                <p>{{ name }} — Class {{ session.get('class', '') }}</p>
+            </div>
+
+            <!-- Grades Table -->
+            <div class="card">
+                <div class="card-title">📊 My Grades</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th style="text-align:center;">Term 1</th>
+                                <th style="text-align:center;">Grade</th>
+                                <th style="text-align:center;">Term 2</th>
+                                <th style="text-align:center;">Grade</th>
+                                <th style="text-align:center;">Average</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in subjects %}
+                            {% set t1 = grades.get('Term1', {}).get(subject, '') %}
+                            {% set t2 = grades.get('Term2', {}).get(subject, '') %}
+                            {% if t1 != '' or t2 != '' %}
+                            <tr>
+                                <td><strong>{{ subject }}</strong></td>
+                                <td style="text-align:center;">
+                                    {% if t1 != '' %}
+                                    <strong>{{ t1 }}</strong>
+                                    {% else %}
+                                    <span style="color:var(--subtext);">-</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align:center;">
+                                    {% if t1 != '' %}
+                                    {% set t1_float = t1|float %}
+                                    <span class="grade-badge
+                                        {% if t1_float >= 80 %}grade-a
+                                        {% elif t1_float >= 70 %}grade-b
+                                        {% elif t1_float >= 60 %}grade-c
+                                        {% elif t1_float >= 50 %}grade-d
+                                        {% else %}grade-f{% endif %}">
+                                        {% if t1_float >= 80 %}A
+                                        {% elif t1_float >= 70 %}B
+                                        {% elif t1_float >= 60 %}C
+                                        {% elif t1_float >= 50 %}D
+                                        {% else %}F{% endif %}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align:center;">
+                                    {% if t2 != '' %}
+                                    <strong>{{ t2 }}</strong>
+                                    {% else %}
+                                    <span style="color:var(--subtext);">-</span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align:center;">
+                                    {% if t2 != '' %}
+                                    {% set t2_float = t2|float %}
+                                    <span class="grade-badge
+                                        {% if t2_float >= 80 %}grade-a
+                                        {% elif t2_float >= 70 %}grade-b
+                                        {% elif t2_float >= 60 %}grade-c
+                                        {% elif t2_float >= 50 %}grade-d
+                                        {% else %}grade-f{% endif %}">
+                                        {% if t2_float >= 80 %}A
+                                        {% elif t2_float >= 70 %}B
+                                        {% elif t2_float >= 60 %}C
+                                        {% elif t2_float >= 50 %}D
+                                        {% else %}F{% endif %}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align:center;">
+                                    {% if t1 != '' and t2 != '' %}
+                                    {% set avg = ((t1|float + t2|float) / 2)|round(1) %}
+                                    <strong style="color:var(--primary);">{{ avg }}</strong>
+                                    {% else %}
+                                    <span style="color:var(--subtext);">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Final Result -->
+                <div style="margin-top:25px; padding:20px; background:linear-gradient(135deg, var(--dark), var(--primary)); border-radius:var(--radius-sm); color:white; text-align:center;">
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+                        <div>
+                            <div style="font-size:0.85rem; opacity:0.8;">Term 1 Avg</div>
+                            <div style="font-size:1.8rem; font-weight:800;">{{ t1_avg }}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.85rem; opacity:0.8;">Term 2 Avg</div>
+                            <div style="font-size:1.8rem; font-weight:800;">{{ t2_avg }}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.85rem; opacity:0.8;">Final Result</div>
+                            <div style="font-size:1.8rem; font-weight:800;">{{ final }}%</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:15px; padding:10px; background:rgba(255,255,255,0.15); border-radius:8px;">
+                        <span style="font-size:1.1rem; font-weight:700;">
+                            {% if final >= 80 %}🏆 Grade A — Excellent!
+                            {% elif final >= 70 %}🥈 Grade B — Very Good!
+                            {% elif final >= 60 %}🥉 Grade C — Good
+                            {% elif final >= 50 %}📚 Grade D — Pass
+                            {% elif final > 0 %}❌ Grade F — Fail
+                            {% else %}📝 Results Pending
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════
+                 ADMIN / GRADES VIEW
+            ══════════════════════════════ -->
+            {% else %}
+
+            <div class="welcome-card">
+                <h2>📊 Examinations</h2>
+                <p>Manage student grades and results</p>
+            </div>
+
+            <!-- Search -->
+            <div class="card">
+                <div class="card-title">🔍 Search Student</div>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput"
+                           placeholder="Search by ID, Name or Class..."
+                           oninput="searchStudents(this.value)">
+                </div>
+                <div id="searchResults" style="margin-top:15px;"></div>
+            </div>
+
+            <!-- Grade Entry Form -->
+            <div class="card" id="gradeForm" style="display:none;">
+                <div class="card-title">
+                    📝 Enter Grades —
+                    <span id="selectedStudentName" style="color:var(--primary);"></span>
+                </div>
+
+                <!-- Term Selection -->
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button class="btn btn-primary" id="term1Btn"
+                            onclick="selectTerm('Term1')" style="flex:1;">
+                        📚 Term 1
+                    </button>
+                    <button class="btn btn-primary" id="term2Btn"
+                            onclick="selectTerm('Term2')"
+                            style="flex:1; opacity:0.6;">
+                        📚 Term 2
+                    </button>
+                </div>
+
+                <!-- Grades Inputs -->
+                <div class="form-row" id="gradesInputs">
+                    {% for subject in subjects %}
+                    <div class="form-group">
+                        <label>{{ subject }}</label>
+                        <input type="number"
+                               class="form-control grade-input"
+                               data-subject="{{ subject }}"
+                               placeholder="0-100"
+                               min="0" max="100">
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div id="gradeResult" style="margin-bottom:15px;"></div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button class="btn btn-danger" onclick="clearGradeForm()">
+                        ✖ Clear
+                    </button>
+                    <button class="btn btn-success" onclick="saveGrades()">
+                        💾 Save Grades
+                    </button>
+                </div>
+            </div>
+
+            {% endif %}
+
+        </div>
+        <!-- End Page Content -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+
+        let selectedStudentId   = '';
+        let selectedStudentName = '';
+        let selectedStudentClass= '';
+        let selectedTerm        = 'Term1';
+
+        // ── SEARCH STUDENTS ──
+        function searchStudents(query) {
+            if (query.length < 1) {
+                document.getElementById('searchResults').innerHTML = '';
+                return;
+            }
+
+            fetch(`/search_student?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('searchResults');
+                    if (data.students.length === 0) {
+                        container.innerHTML =
+                            '<p style="color:var(--subtext); text-align:center;">No students found</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.students.forEach(s => {
+                        html += `
+                            <div style="display:flex; justify-content:space-between; align-items:center;
+                                        padding:12px; border-bottom:1px solid #f0f0f0;
+                                        transition:background 0.2s;"
+                                 onmouseover="this.style.background='#f8faff'"
+                                 onmouseout="this.style.background=''">
+                                <div>
+                                    <strong>${s.Name}</strong>
+                                    <span style="color:var(--subtext); font-size:0.85rem; margin-left:10px;">
+                                        ${s.ID} | Class ${s.Class}
+                                    </span>
+                                </div>
+                                <button class="btn btn-primary"
+                                        style="padding:6px 14px; font-size:0.8rem;"
+                                        onclick="selectStudent('${s.ID}', '${s.Name}', '${s.Class}')">
+                                    📝 Enter Grades
+                                </button>
+                            </div>`;
+                    });
+
+                    container.innerHTML = html;
+                });
+        }
+
+        // ── SELECT STUDENT ──
+        function selectStudent(id, name, cls) {
+            selectedStudentId    = id;
+            selectedStudentName  = name;
+            selectedStudentClass = cls;
+
+            document.getElementById('selectedStudentName').textContent =
+                `${name} (${id}) — Class ${cls}`;
+            document.getElementById('gradeForm').style.display = 'block';
+            document.getElementById('gradeForm').scrollIntoView({ behavior: 'smooth' });
+
+            // Load existing grades
+            loadExistingGrades();
+        }
+
+        // ── SELECT TERM ──
+        function selectTerm(term) {
+            selectedTerm = term;
+            document.getElementById('term1Btn').style.opacity = term === 'Term1' ? '1' : '0.6';
+            document.getElementById('term2Btn').style.opacity = term === 'Term2' ? '1' : '0.6';
+
+            // Load grades for selected term
+            loadExistingGrades();
+        }
+
+        // ── LOAD EXISTING GRADES ──
+        function loadExistingGrades() {
+            fetch(`/get_student_grades?student_id=${selectedStudentId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const termGrades = data[selectedTerm] || {};
+                    document.querySelectorAll('.grade-input').forEach(input => {
+                        const subject = input.dataset.subject;
+                        input.value = termGrades[subject] || '';
+                    });
+                });
+        }
+
+        // ── SAVE GRADES ──
+        function saveGrades() {
+            const gradesData = {};
+            let hasGrades    = false;
+
+            document.querySelectorAll('.grade-input').forEach(input => {
+                if (input.value !== '') {
+                    const score = parseFloat(input.value);
+                    if (score >= 0 && score <= 100) {
+                        gradesData[input.dataset.subject] = score;
+                        hasGrades = true;
+                    }
+                }
+            });
+
+            if (!hasGrades) {
+                document.getElementById('gradeResult').innerHTML =
+                    '<div class="alert alert-error">❌ Please enter at least one grade!</div>';
+                return;
+            }
+
+            const btn = event.target;
+            btn.innerHTML = '<span class="spinner"></span> Saving...';
+            btn.disabled  = true;
+
+            fetch('/save_grades', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id:   selectedStudentId,
+                    student_name: selectedStudentName,
+                    class:        selectedStudentClass,
+                    term:         selectedTerm,
+                    grades:       gradesData
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerHTML = '💾 Save Grades';
+                btn.disabled  = false;
+
+                if (data.success) {
+                    document.getElementById('gradeResult').innerHTML =
+                        '<div class="alert alert-success">✅ Grades saved successfully!</div>';
+                    setTimeout(() => {
+                        document.getElementById('gradeResult').innerHTML = '';
+                    }, 3000);
+                } else {
+                    document.getElementById('gradeResult').innerHTML =
+                        `<div class="alert alert-error">❌ ${data.message}</div>`;
+                }
+            })
+            .catch(() => {
+                btn.innerHTML = '💾 Save Grades';
+                btn.disabled  = false;
+                document.getElementById('gradeResult').innerHTML =
+                    '<div class="alert alert-error">❌ Connection error!</div>';
+            });
+        }
+
+        // ── CLEAR FORM ──
+        function clearGradeForm() {
+            document.querySelectorAll('.grade-input').forEach(i => i.value = '');
+            document.getElementById('gradeResult').innerHTML = '';
+        }
+
+        // ── SHOW ALERT ──
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            const alert     = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+    </script>
+
+</body>
+</html>
