@@ -87,16 +87,21 @@ def login():
         role_type = request.form.get('role', 'staff')
 
         if role_type == 'staff':
-            sheet = get_sheet('users')
-            if sheet:
-                users = sheet.get_all_records()
-                for user in users:
-                    if (str(user.get('Username', '')).lower() == username.lower() and
-                            str(user.get('Password', '')) == password):
-                        session['user']  = username
-                        session['role']  = user.get('Role', '')
-                        session['name']  = username.title()
-                        return redirect(url_for('dashboard'))
+            # Hardcoded staff users
+            staff_users = {
+                'admin':      {'password': '12345',   'role': 'admin'},
+                'fee':        {'password': 'fee123',  'role': 'fee'},
+                'attendance': {'password': 'att123',  'role': 'attendance'},
+                'grades':     {'password': 'grd123',  'role': 'grades'},
+            }
+            if username.lower() in staff_users:
+                user = staff_users[username.lower()]
+                if user['password'] == password:
+                    session['user'] = username
+                    session['role'] = user['role']
+                    session['name'] = username.title()
+                    return redirect(url_for('dashboard'))
+
             return render_template('login.html', error='Invalid username or password!')
 
         else:
@@ -424,10 +429,14 @@ def pay_fee():
         records = sheet.get_all_records()
         for i, record in enumerate(records, start=2):
             if str(record.get('ID', '')) == student_id:
-                current_paid = float(record.get('Amount_Paid', 0))
-                total_fee    = float(record.get('Total_Fee', 0))
+                current_paid = float(record.get('Amount_Paid', 0) or 0)
+                total_fee    = float(record.get('Total_Fee', 0) or 0)
                 new_paid     = current_paid + amount
                 new_balance  = total_fee - new_paid
+
+                # Hadduu balance negative noqdo 0 u dhig
+                if new_balance < 0:
+                    new_balance = 0
 
                 sheet.update_cell(i, 7, new_paid)
                 sheet.update_cell(i, 8, new_balance)
@@ -447,7 +456,8 @@ def pay_fee():
                 return jsonify({
                     'success': True,
                     'new_paid': new_paid,
-                    'new_balance': new_balance
+                    'new_balance': new_balance,
+                    'message': f'Payment of ${amount} recorded!'
                 })
 
         return jsonify({'success': False, 'message': 'Student not found'})
@@ -632,30 +642,44 @@ def submit_vote():
         candidate_id = data.get('candidate_id')
         student_id   = session.get('student_id')
 
+        # Check already voted
         votes_sheet = get_sheet('votes')
-        if votes_sheet:
-            vote_records = votes_sheet.get_all_records()
-            if any(str(v.get('Student_ID', '')) == student_id
-                   for v in vote_records):
-                return jsonify({'success': False,
-                                'message': 'You have already voted!'})
+        if not votes_sheet:
+            return jsonify({'success': False, 'message': 'Error!'})
 
+        vote_records = votes_sheet.get_all_records()
+
+        # Hubi hal cod kaliya
+        student_votes = [v for v in vote_records
+                        if str(v.get('Student_ID', '')) == student_id]
+
+        if len(student_votes) >= 1:
+            return jsonify({
+                'success': False,
+                'message': 'You have already voted! Each student can only vote once.'
+            })
+
+        # Add vote
         votes_sheet.append_row([
-            student_id, candidate_id,
+            student_id,
+            candidate_id,
             datetime.now().strftime('%Y-%m-%d')
         ], value_input_option='RAW')
 
+        # Update candidate votes
         candidates_sheet = get_sheet('candidates')
         if candidates_sheet:
             records = candidates_sheet.get_all_records()
             for i, c in enumerate(records, start=2):
                 if str(c.get('Candidate_ID', '')) == candidate_id:
-                    current_votes = int(c.get('Votes', 0))
+                    current_votes = int(c.get('Votes', 0) or 0)
                     candidates_sheet.update_cell(i, 4, current_votes + 1)
                     break
 
-        return jsonify({'success': True,
-                        'message': 'Vote submitted successfully! 🎉'})
+        return jsonify({
+            'success': True,
+            'message': 'Vote submitted successfully! 🎉'
+        })
 
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
