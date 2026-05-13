@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fees - School Management System</title>
+    <title>Vote - School Management System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
 </head>
@@ -26,7 +26,7 @@
                 <span class="nav-icon">📊</span>
                 <span class="nav-text">Examinations</span>
             </a>
-            <a href="{{ url_for('fees') }}" class="nav-item active">
+            <a href="{{ url_for('fees') }}" class="nav-item">
                 <span class="nav-icon">💰</span>
                 <span class="nav-text">Fees</span>
             </a>
@@ -36,7 +36,7 @@
                 <span class="nav-text">Attendance</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('votes') }}" class="nav-item">
+            <a href="{{ url_for('votes') }}" class="nav-item active">
                 <span class="nav-icon">🗳️</span>
                 <span class="nav-text">Vote</span>
             </a>
@@ -61,7 +61,7 @@
         <div class="navbar">
             <div class="navbar-left">
                 <button class="menu-toggle" id="menuToggle">☰</button>
-                <span class="navbar-title">Fees</span>
+                <span class="navbar-title">School Election</span>
             </div>
             <div class="navbar-right">
                 <div class="user-badge">
@@ -79,178 +79,208 @@
         <!-- Page Content -->
         <div class="page-content">
 
-            <!-- ══════════════════════════════
-                 STUDENT VIEW
-            ══════════════════════════════ -->
-            {% if role == 'student' %}
-
+            <!-- Welcome Card -->
             <div class="welcome-card">
-                <h2>💰 My Fees</h2>
-                <p>Fee status overview</p>
+                <h2>🗳️ School Election 2026</h2>
+                <p>
+                    {% if election_open %}
+                    ✅ Election is OPEN — Cast your vote!
+                    {% else %}
+                    🔒 Election is currently CLOSED
+                    {% endif %}
+                </p>
             </div>
 
-            <div class="info-grid">
-                <div class="info-card teal">
-                    <div class="info-card-icon">💰</div>
-                    <div class="info-card-title">TOTAL FEE</div>
-                    <div class="info-card-value">${{ students[0].get('Total_Fee', 0) if students else 0 }}</div>
-                </div>
-                <div class="info-card green">
-                    <div class="info-card-icon">✅</div>
-                    <div class="info-card-title">AMOUNT PAID</div>
-                    <div class="info-card-value" style="color:var(--success);">
-                        ${{ students[0].get('Amount_Paid', 0) if students else 0 }}
-                    </div>
-                </div>
-                <div class="info-card" style="border-top-color:var(--error);">
-                    <div class="info-card-icon">⚠️</div>
-                    <div class="info-card-title">BALANCE</div>
-                    <div class="info-card-value" style="color:var(--error);">
-                        ${{ students[0].get('Balance', 0) if students else 0 }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Bar -->
-            {% if students %}
-            {% set total = students[0].get('Total_Fee', 0)|float %}
-            {% set paid  = students[0].get('Amount_Paid', 0)|float %}
-            {% set pct   = ((paid / total) * 100)|round(1) if total > 0 else 0 %}
+            <!-- ══════════════════════════════
+                 ADMIN CONTROLS
+            ══════════════════════════════ -->
+            {% if role == 'admin' %}
             <div class="card">
-                <div class="card-title">💰 Payment Progress</div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:var(--subtext);">Paid: ${{ paid }}</span>
-                    <span style="color:var(--subtext);">Total: ${{ total }}</span>
+                <div class="card-title">⚙️ Election Controls</div>
+                <div class="action-buttons">
+                    {% if election_open %}
+                    <button class="btn btn-danger" onclick="toggleElection('closed')">
+                        🔒 Close Election
+                    </button>
+                    {% else %}
+                    <button class="btn btn-success" onclick="toggleElection('open')">
+                        🔓 Open Election
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-primary" onclick="openModal('addCandidateModal')">
+                        ➕ Add Candidate
+                    </button>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" data-width="{{ pct }}" style="width:0%"></div>
-                </div>
-                <div style="text-align:center; margin-top:8px; font-weight:700; color:var(--primary);">
-                    {{ pct }}% Paid
+
+                <!-- Stats -->
+                <div style="margin-top:20px; padding:15px; background:var(--background); border-radius:var(--radius-sm);">
+                    <strong>Total Votes Cast: {{ total_votes }}</strong>
                 </div>
             </div>
             {% endif %}
 
             <!-- ══════════════════════════════
-                 ADMIN / FEE ADMIN VIEW
+                 ELECTION CLOSED MESSAGE
             ══════════════════════════════ -->
-            {% else %}
-
-            <div class="welcome-card">
-                <h2>💰 Fee Management</h2>
-                <p>Manage student fees and payments</p>
+            {% if not election_open and role == 'student' %}
+            <div class="card" style="text-align:center; padding:40px;">
+                <div style="font-size:4rem; margin-bottom:15px;">🔒</div>
+                <h3 style="color:var(--dark); margin-bottom:10px;">
+                    Election Not Started Yet
+                </h3>
+                <p style="color:var(--subtext);">
+                    The election has not been opened yet.<br>
+                    Please wait for the admin to open the election.
+                </p>
             </div>
 
-            <!-- Stats -->
-            <div class="stats-grid">
-                <div class="stat-card blue">
-                    <div class="stat-icon">👨‍🎓</div>
-                    <div class="stat-number">{{ students|length }}</div>
-                    <div class="stat-label">Total Students</div>
-                </div>
-                <div class="stat-card teal">
-                    <div class="stat-icon">✅</div>
-                    <div class="stat-number">
-                        {{ students|selectattr('Balance', 'equalto', 0)|list|length }}
-                    </div>
-                    <div class="stat-label">Fully Paid</div>
-                </div>
-                <div class="stat-card gold">
-                    <div class="stat-icon">⚠️</div>
-                    <div class="stat-number">
-                        {{ students|rejectattr('Balance', 'equalto', 0)|list|length }}
-                    </div>
-                    <div class="stat-label">Pending</div>
-                </div>
+            <!-- ══════════════════════════════
+                 ALREADY VOTED
+            ══════════════════════════════ -->
+            {% elif already_voted and role == 'student' %}
+            <div class="card" style="text-align:center; padding:40px;">
+                <div style="font-size:4rem; margin-bottom:15px;">✅</div>
+                <h3 style="color:var(--success); margin-bottom:10px;">
+                    You Have Already Voted!
+                </h3>
+                <p style="color:var(--subtext);">
+                    Thank you for participating in the election.
+                </p>
             </div>
+            {% endif %}
 
-            <!-- Search -->
+            <!-- ══════════════════════════════
+                 CANDIDATES
+            ══════════════════════════════ -->
+            {% if candidates %}
             <div class="card">
-                <form method="GET">
-                    <div class="search-box">
-                        <input type="text" name="search"
-                               class="search-input"
-                               placeholder="🔍 Search by ID or Name..."
-                               value="{{ search }}">
-                        <button type="submit" class="btn btn-primary">
-                            🔍 Search
+                <div class="card-title">👥 Candidates</div>
+                <div class="vote-grid">
+                    {% for candidate in candidates %}
+                    <div class="vote-card" data-candidate-id="{{ candidate.get('Candidate_ID', '') }}">
+
+                        <!-- Photo -->
+                        <img src="{{ url_for('static', filename='images/candidates/' + candidate.get('Candidate_ID', '') + '.jpg') }}"
+                             alt="{{ candidate.get('Name', '') }}"
+                             onerror="this.src='{{ url_for('static', filename='images/logo.png') }}'">
+
+                        <!-- Name & Class -->
+                        <h3>{{ candidate.get('Name', '') }}</h3>
+                        <p>Class {{ candidate.get('Class', '') }}</p>
+
+                        <!-- Votes -->
+                        <div style="margin-bottom:15px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                <span style="font-size:0.85rem; color:var(--subtext);">Votes</span>
+                                <strong style="color:var(--primary);">
+                                    {{ candidate.get('Votes', 0) }}
+                                    ({{ candidate.get('percentage', 0) }}%)
+                                </strong>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill"
+                                     data-width="{{ candidate.get('percentage', 0) }}"
+                                     style="width:0%">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vote Button -->
+                        {% if role == 'student' and election_open and not already_voted %}
+                        <button class="btn btn-primary vote-btn"
+                                style="width:100%;"
+                                onclick="submitVote('{{ candidate.get('Candidate_ID', '') }}', '{{ candidate.get('Name', '') }}')">
+                            🗳️ Vote
                         </button>
+
+                        {% elif role == 'student' and not election_open %}
+                        <button class="btn btn-disabled" style="width:100%;" disabled>
+                            🔒 Election Closed
+                        </button>
+
+                        {% elif role == 'student' and already_voted %}
+                        <button class="btn btn-disabled" style="width:100%;" disabled>
+                            ✅ Already Voted
+                        </button>
+
+                        {% elif role == 'admin' %}
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-primary"
+                                    style="flex:1; font-size:0.8rem; padding:8px;"
+                                    onclick="openEditCandidate('{{ candidate.get('Candidate_ID', '') }}', '{{ candidate.get('Name', '') }}', '{{ candidate.get('Class', '') }}')">
+                                ✏️ Edit
+                            </button>
+                            <button class="btn btn-danger"
+                                    style="flex:1; font-size:0.8rem; padding:8px;"
+                                    onclick="deleteCandidate('{{ candidate.get('Candidate_ID', '') }}', '{{ candidate.get('Name', '') }}')">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                        {% endif %}
+
                     </div>
-                </form>
+                    {% endfor %}
+                </div>
             </div>
 
-            <!-- Fees Table -->
+            <!-- ══════════════════════════════
+                 RESULTS
+            ══════════════════════════════ -->
+            {% if total_votes > 0 %}
             <div class="card">
-                <div class="card-title">💰 Student Fees</div>
+                <div class="card-title">🏆 Election Results</div>
                 <div class="table-container">
-                    <table id="feesTable">
+                    <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Name</th>
+                                <th>Rank</th>
+                                <th>Candidate</th>
                                 <th>Class</th>
-                                <th>Total Fee</th>
-                                <th>Paid</th>
-                                <th>Balance</th>
-                                <th>Status</th>
-                                {% if role in ['admin', 'fee'] %}
-                                <th>Action</th>
-                                {% endif %}
+                                <th>Votes</th>
+                                <th>Percentage</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for student in students %}
-                            {% if student.get('ID') and student.get('Name') %}
+                            {% for candidate in candidates|sort(attribute='Votes', reverse=True) %}
                             <tr>
                                 <td>
-                                    <span class="badge badge-primary">
-                                        {{ student.get('ID', '') }}
-                                    </span>
+                                    {% if loop.index == 1 %}🥇
+                                    {% elif loop.index == 2 %}🥈
+                                    {% elif loop.index == 3 %}🥉
+                                    {% else %}{{ loop.index }}{% endif %}
                                 </td>
-                                <td><strong>{{ student.get('Name', '') }}</strong></td>
-                                <td>Class {{ student.get('Class', '') }}</td>
-                                <td>${{ student.get('Total_Fee', 0) }}</td>
-                                <td style="color:var(--success); font-weight:600;">
-                                    ${{ student.get('Amount_Paid', 0) }}
+                                <td><strong>{{ candidate.get('Name', '') }}</strong></td>
+                                <td>Class {{ candidate.get('Class', '') }}</td>
+                                <td>
+                                    <strong style="color:var(--primary);">
+                                        {{ candidate.get('Votes', 0) }}
+                                    </strong>
                                 </td>
                                 <td>
-                                    {% set bal = student.get('Balance', 0)|float %}
-                                    <span style="color:{% if bal > 0 %}var(--error){% else %}var(--success){% endif %}; font-weight:700;">
-                                        ${{ bal }}
-                                    </span>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div class="progress-bar" style="flex:1; height:10px;">
+                                            <div class="progress-fill"
+                                                 data-width="{{ candidate.get('percentage', 0) }}"
+                                                 style="width:0%">
+                                            </div>
+                                        </div>
+                                        <span style="font-weight:700; color:var(--primary); min-width:45px;">
+                                            {{ candidate.get('percentage', 0) }}%
+                                        </span>
+                                    </div>
                                 </td>
-                                <td>
-                                    {% set bal = student.get('Balance', 0)|float %}
-                                    {% if bal <= 0 %}
-                                    <span class="badge badge-success">✅ Paid</span>
-                                    {% elif bal < student.get('Total_Fee', 0)|float %}
-                                    <span class="badge badge-warning">⚠️ Partial</span>
-                                    {% else %}
-                                    <span class="badge badge-danger">❌ Unpaid</span>
-                                    {% endif %}
-                                </td>
-                                {% if role in ['admin', 'fee'] %}
-                                <td>
-                                    <button class="btn btn-success"
-                                            style="padding:6px 14px; font-size:0.8rem;"
-                                            onclick="openPayModal('{{ student.get('ID', '') }}', '{{ student.get('Name', '') }}', {{ student.get('Balance', 0) }})">
-                                        💰 Pay
-                                    </button>
-                                </td>
-                                {% endif %}
                             </tr>
-                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
-
-                    {% if not students %}
-                    <div style="text-align:center; padding:40px; color:var(--subtext);">
-                        <div style="font-size:3rem;">💰</div>
-                        <p>No students found</p>
-                    </div>
-                    {% endif %}
                 </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="card" style="text-align:center; padding:40px;">
+                <div style="font-size:3rem;">👥</div>
+                <p style="color:var(--subtext);">No candidates added yet</p>
             </div>
             {% endif %}
 
@@ -261,38 +291,82 @@
     <!-- End Main Content -->
 
     <!-- ══════════════════════════════
-         PAY MODAL
+         MODALS
     ══════════════════════════════ -->
-    {% if role in ['admin', 'fee'] %}
-    <div class="modal-overlay" id="payModal" style="display:none;">
+
+    {% if role == 'admin' %}
+    <!-- Add Candidate Modal -->
+    <div class="modal-overlay" id="addCandidateModal" style="display:none;">
         <div class="modal">
-            <div class="modal-title">💰 Record Payment</div>
-
-            <div style="background:var(--background); border-radius:var(--radius-sm); padding:15px; margin-bottom:20px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:var(--subtext);">Student:</span>
-                    <strong id="payStudentName">-</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span style="color:var(--subtext);">Balance:</span>
-                    <strong id="payBalance" style="color:var(--error);">-</strong>
-                </div>
-            </div>
-
+            <div class="modal-title">➕ Add Candidate</div>
             <div class="form-group">
-                <label>Amount to Pay ($)</label>
-                <input type="number" class="form-control" id="payAmount"
-                       placeholder="Enter amount" min="1">
+                <label>Candidate ID</label>
+                <input type="text" class="form-control" id="candId"
+                       placeholder="e.g. CS401">
             </div>
-
-            <div id="payResult" style="margin-bottom:15px;"></div>
-
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" class="form-control" id="candName"
+                       placeholder="Candidate full name">
+            </div>
+            <div class="form-group">
+                <label>Class</label>
+                <select class="form-control" id="candClass">
+                    <option value="1">Class 1</option>
+                    <option value="2">Class 2</option>
+                    <option value="3">Class 3</option>
+                    <option value="4">Class 4</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Photo (Optional)</label>
+                <input type="file" class="form-control" id="candPhoto"
+                       accept="image/*">
+            </div>
+            <div id="candResult" style="margin-bottom:15px;"></div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
-                <button class="btn btn-danger" onclick="closeModal('payModal')">
+                <button class="btn btn-danger"
+                        onclick="closeModal('addCandidateModal')">
                     ✖ Cancel
                 </button>
-                <button class="btn btn-success" onclick="submitPayment()">
-                    💰 Confirm Payment
+                <button class="btn btn-success" onclick="addCandidate()">
+                    ➕ Add Candidate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Candidate Modal -->
+    <div class="modal-overlay" id="editCandidateModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-title">✏️ Edit Candidate</div>
+            <input type="hidden" id="editCandId">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" class="form-control" id="editCandName">
+            </div>
+            <div class="form-group">
+                <label>Class</label>
+                <select class="form-control" id="editCandClass">
+                    <option value="1">Class 1</option>
+                    <option value="2">Class 2</option>
+                    <option value="3">Class 3</option>
+                    <option value="4">Class 4</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Photo (Optional)</label>
+                <input type="file" class="form-control" id="editCandPhoto"
+                       accept="image/*">
+            </div>
+            <div id="editCandResult" style="margin-bottom:15px;"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn btn-danger"
+                        onclick="closeModal('editCandidateModal')">
+                    ✖ Cancel
+                </button>
+                <button class="btn btn-success" onclick="updateCandidate()">
+                    💾 Save Changes
                 </button>
             </div>
         </div>
@@ -302,72 +376,151 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
 
-        let currentStudentId = '';
-
-        // ── OPEN PAY MODAL ──
-        function openPayModal(studentId, studentName, balance) {
-            currentStudentId = studentId;
-            document.getElementById('payStudentName').textContent = studentName;
-            document.getElementById('payBalance').textContent = '$' + balance;
-            document.getElementById('payAmount').value = '';
-            document.getElementById('payResult').innerHTML = '';
-            openModal('payModal');
-        }
-
-        // ── SUBMIT PAYMENT ──
-        function submitPayment() {
-            const amount = parseFloat(document.getElementById('payAmount').value);
-
-            if (!amount || amount <= 0) {
-                document.getElementById('payResult').innerHTML =
-                    '<div class="alert alert-error">❌ Please enter a valid amount!</div>';
+        // ── SUBMIT VOTE ──
+        function submitVote(candidateId, candidateName) {
+            if (!confirm(`Are you sure you want to vote for ${candidateName}?\nThis action cannot be undone!`)) {
                 return;
             }
 
-            const btn = event.target;
-            btn.innerHTML = '<span class="spinner"></span> Processing...';
-            btn.disabled = true;
-
-            fetch('/pay_fee', {
+            fetch('/submit_vote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    student_id: currentStudentId,
-                    amount: amount
-                })
+                body: JSON.stringify({ candidate_id: candidateId })
             })
             .then(res => res.json())
             .then(data => {
-                btn.innerHTML = '💰 Confirm Payment';
-                btn.disabled = false;
-
                 if (data.success) {
-                    document.getElementById('payResult').innerHTML =
-                        `<div class="alert alert-success">
-                            ✅ Payment recorded!<br>
-                            New Balance: <strong>$${data.new_balance}</strong>
-                        </div>`;
-                    setTimeout(() => {
-                        closeModal('payModal');
-                        location.reload();
-                    }, 1500);
+                    showAlert('✅ Vote submitted successfully! 🎉', 'success');
+                    setTimeout(() => location.reload(), 1500);
                 } else {
-                    document.getElementById('payResult').innerHTML =
-                        `<div class="alert alert-error">❌ ${data.message}</div>`;
+                    showAlert(`❌ ${data.message}`, 'error');
                 }
             })
-            .catch(() => {
-                btn.innerHTML = '💰 Confirm Payment';
-                btn.disabled = false;
-                document.getElementById('payResult').innerHTML =
-                    '<div class="alert alert-error">❌ Connection error!</div>';
+            .catch(() => showAlert('❌ Connection error!', 'error'));
+        }
+
+        // ── TOGGLE ELECTION ──
+        function toggleElection(status) {
+            const msg = status === 'open'
+                ? 'Are you sure you want to OPEN the election?'
+                : 'Are you sure you want to CLOSE the election?';
+
+            if (!confirm(msg)) return;
+
+            fetch('/toggle_election', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(`✅ Election ${status}!`, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert('❌ Error!', 'error');
+                }
+            });
+        }
+
+        // ── ADD CANDIDATE ──
+        function addCandidate() {
+            const id    = document.getElementById('candId').value.trim();
+            const name  = document.getElementById('candName').value.trim();
+            const cls   = document.getElementById('candClass').value;
+            const photo = document.getElementById('candPhoto').files[0];
+
+            if (!id || !name) {
+                document.getElementById('candResult').innerHTML =
+                    '<div class="alert alert-error">❌ ID and Name are required!</div>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('candidate_id', id);
+            formData.append('name', name);
+            formData.append('class', cls);
+            if (photo) formData.append('photo', photo);
+
+            fetch('/add_candidate', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('candResult').innerHTML =
+                            '<div class="alert alert-success">✅ Candidate added!</div>';
+                        setTimeout(() => {
+                            closeModal('addCandidateModal');
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        document.getElementById('candResult').innerHTML =
+                            `<div class="alert alert-error">❌ ${data.message}</div>`;
+                    }
+                });
+        }
+
+        // ── OPEN EDIT CANDIDATE ──
+        function openEditCandidate(id, name, cls) {
+            document.getElementById('editCandId').value   = id;
+            document.getElementById('editCandName').value = name;
+            document.getElementById('editCandClass').value = cls;
+            openModal('editCandidateModal');
+        }
+
+        // ── UPDATE CANDIDATE ──
+        function updateCandidate() {
+            const id    = document.getElementById('editCandId').value;
+            const name  = document.getElementById('editCandName').value.trim();
+            const cls   = document.getElementById('editCandClass').value;
+            const photo = document.getElementById('editCandPhoto').files[0];
+
+            const formData = new FormData();
+            formData.append('candidate_id', id);
+            formData.append('name', name);
+            formData.append('class', cls);
+            if (photo) formData.append('photo', photo);
+
+            fetch('/update_candidate', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('editCandResult').innerHTML =
+                            '<div class="alert alert-success">✅ Updated!</div>';
+                        setTimeout(() => {
+                            closeModal('editCandidateModal');
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        document.getElementById('editCandResult').innerHTML =
+                            `<div class="alert alert-error">❌ ${data.message}</div>`;
+                    }
+                });
+        }
+
+        // ── DELETE CANDIDATE ──
+        function deleteCandidate(id, name) {
+            if (!confirm(`Delete candidate ${name}?`)) return;
+
+            fetch('/delete_candidate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidate_id: id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('✅ Candidate deleted!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert('❌ Error!', 'error');
+                }
             });
         }
 
         // ── SHOW ALERT ──
         function showAlert(message, type = 'success') {
             const container = document.getElementById('alertContainer');
-            const alert = document.createElement('div');
+            const alert     = document.createElement('div');
             alert.className = `alert alert-${type}`;
             alert.textContent = message;
             container.appendChild(alert);
