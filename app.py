@@ -3,7 +3,7 @@
 #   Created By Abdifatah Said
 # ═══════════════════════════════════
 
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
 import gspread
 from google.oauth2.service_account import Credentials
 import os
@@ -13,7 +13,6 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = 'school_system_secret_key_2026'
 
-# ── GOOGLE SHEETS CONNECTION ──
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
@@ -21,6 +20,13 @@ SCOPES = [
 
 SPREADSHEET_ID = '1dRrx8QUq8XpBiP8TzPb85ObL95LgkDQZI6M72NBbGag'
 
+SUBJECTS = [
+    'Math', 'English', 'Science', 'Social Studies',
+    'Islamic Studies', 'Somali', 'Computer', 'History',
+    'Geography', 'Art', 'Physical Education'
+]
+
+# ── GOOGLE SHEETS ──
 def get_sheet(sheet_name):
     try:
         if os.environ.get('GOOGLE_PRIVATE_KEY'):
@@ -39,16 +45,14 @@ def get_sheet(sheet_name):
             creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         else:
             creds = Credentials.from_service_account_file('creds.json', scopes=SCOPES)
-
         client = gspread.authorize(creds)
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
         return spreadsheet.worksheet(sheet_name)
-
     except Exception as e:
-        print(f"Sheet error: {e}")
+        print(f"Sheet error ({sheet_name}): {e}")
         return None
 
-# ── LOGIN REQUIRED DECORATOR ──
+# ── DECORATORS ──
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -69,8 +73,19 @@ def role_required(*roles):
         return decorated
     return decorator
 
+# ── PWA ──
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory('.', 'manifest.json',
+                               mimetype='application/manifest+json')
+
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory('.', 'sw.js',
+                               mimetype='application/javascript')
+
 # ══════════════════════════════════════
-#   LOGIN
+#   LOGIN / LOGOUT
 # ══════════════════════════════════════
 
 @app.route('/')
@@ -87,12 +102,11 @@ def login():
         role_type = request.form.get('role', 'staff')
 
         if role_type == 'staff':
-            # Hardcoded staff users
             staff_users = {
-                'admin':      {'password': '12345',   'role': 'admin'},
-                'fee':        {'password': 'fee123',  'role': 'fee'},
-                'attendance': {'password': 'att123',  'role': 'attendance'},
-                'grades':     {'password': 'grd123',  'role': 'grades'},
+                'admin':      {'password': '12345',  'role': 'admin'},
+                'fee':        {'password': 'fee123', 'role': 'fee'},
+                'attendance': {'password': 'att123', 'role': 'attendance'},
+                'grades':     {'password': 'grd123', 'role': 'grades'},
             }
             if username.lower() in staff_users:
                 user = staff_users[username.lower()]
@@ -101,7 +115,6 @@ def login():
                     session['role'] = user['role']
                     session['name'] = username.title()
                     return redirect(url_for('dashboard'))
-
             return render_template('login.html', error='Invalid username or password!')
 
         else:
@@ -114,14 +127,13 @@ def login():
                         session['user']       = username
                         session['role']       = 'student'
                         session['name']       = student.get('Name', '')
-                        session['class']      = student.get('Class', '')
+                        session['class']      = str(student.get('Class', ''))
                         session['student_id'] = student.get('ID', '')
                         return redirect(url_for('dashboard'))
             return render_template('login.html', error='Invalid Student ID or password!')
 
     return render_template('login.html')
 
-# ── LOGOUT ──
 @app.route('/logout')
 def logout():
     session.clear()
@@ -138,8 +150,8 @@ def dashboard():
     name = session.get('name')
 
     if role == 'student':
-        student_id = session.get('student_id')
-        sheet      = get_sheet('students')
+        student_id   = session.get('student_id')
+        sheet        = get_sheet('students')
         student_data = {}
         if sheet:
             students = sheet.get_all_records()
@@ -148,16 +160,17 @@ def dashboard():
                     student_data = s
                     break
         return render_template('dashboard.html',
-                               role=role,
-                               name=name,
+                               role=role, name=name,
                                student=student_data)
 
     elif role == 'admin':
         students_sheet = get_sheet('students')
         total_students = 0
         if students_sheet:
-            students = students_sheet.get_all_records()
-            total_students = len([s for s in students if s.get('ID')])
+            all_s = students_sheet.get_all_records()
+            total_students = len([s for s in all_s
+                                  if s.get('ID') and
+                                  str(s.get('ID', '')).startswith('CS')])
 
         fees_sheet      = get_sheet('fees')
         total_collected = 0
@@ -165,7 +178,7 @@ def dashboard():
             fees = fees_sheet.get_all_records()
             for f in fees:
                 try:
-                    total_collected += float(f.get('Amount_Paid', 0))
+                    total_collected += float(f.get('Amount_Paid', 0) or 0)
                 except:
                     pass
 
@@ -174,12 +187,12 @@ def dashboard():
         if attendance_sheet:
             records = attendance_sheet.get_all_records()
             if records:
-                present = len([r for r in records if r.get('Status') == 'Present'])
+                present = len([r for r in records
+                               if r.get('Status') == 'Present'])
                 attendance_rate = round((present / len(records)) * 100, 1)
 
         return render_template('dashboard.html',
-                               role=role,
-                               name=name,
+                               role=role, name=name,
                                total_students=total_students,
                                total_collected=total_collected,
                                attendance_rate=attendance_rate)
@@ -196,11 +209,13 @@ def students():
     role   = session.get('role')
     search = request.args.get('search', '').lower()
 
-    sheet       = get_sheet('students')
+    sheet        = get_sheet('students')
     all_students = []
     if sheet:
-        records     = sheet.get_all_records()
-        all_students = [s for s in records if s.get('ID')]
+        records      = sheet.get_all_records()
+        all_students = [s for s in records
+                        if s.get('ID') and
+                        str(s.get('ID', '')).startswith('CS')]
         if search:
             all_students = [s for s in all_students if
                             search in str(s.get('ID', '')).lower() or
@@ -226,26 +241,61 @@ def add_student():
         if not sheet:
             return jsonify({'success': False, 'message': 'Sheet error'})
 
-        records       = sheet.get_all_records()
-        class_students = [r for r in records if str(r.get('Class', '')) == class_ and r.get('ID')]
-        next_num      = len(class_students) + 1
-        student_id    = f"CS{class_}{next_num:02d}"
-        name_part     = name[:3].lower().replace(' ', '')
-        password      = f"{name_part}{next_num:03d}"
-        balance       = total_fee
+        records        = sheet.get_all_records()
+        class_students = [r for r in records
+                          if str(r.get('Class', '')) == class_ and
+                          str(r.get('ID', '')).startswith('CS')]
+        next_num    = len(class_students) + 1
+        student_id  = f"CS{class_}{next_num:02d}"
+        name_part   = name[:3].lower().replace(' ', '')
+        password    = f"{name_part}{next_num:03d}"
 
         new_row = [
             student_id, name, class_, phone, password,
-            total_fee, 0, balance,
+            total_fee, 0, total_fee,
             datetime.now().strftime('%Y-%m-%d')
         ]
-
         sheet.append_row(new_row, value_input_option='RAW')
         return jsonify({
             'success': True,
             'message': f'Student added! ID: {student_id}, Password: {password}'
         })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/edit_student', methods=['POST'])
+@role_required('admin')
+def edit_student():
+    try:
+        data       = request.get_json()
+        student_id = data.get('student_id')
+        name       = data.get('name', '').strip()
+        class_     = data.get('class', '').strip()
+        phone      = data.get('phone', '').strip()
+        total_fee  = data.get('total_fee', '0')
+
+        sheet = get_sheet('students')
+        if not sheet:
+            return jsonify({'success': False, 'message': 'Sheet error'})
+
+        records = sheet.get_all_records()
+        for i, record in enumerate(records, start=2):
+            if str(record.get('ID', '')) == student_id:
+                current_paid = float(record.get('Amount_Paid', 0) or 0)
+                new_balance  = float(total_fee) - current_paid
+                if new_balance < 0:
+                    new_balance = 0
+
+                sheet.update_cell(i, 2, name)
+                sheet.update_cell(i, 3, class_)
+                sheet.update_cell(i, 4, phone)
+                sheet.update_cell(i, 6, total_fee)
+                sheet.update_cell(i, 8, new_balance)
+
+                return jsonify({'success': True,
+                                'message': 'Student updated!'})
+
+        return jsonify({'success': False, 'message': 'Student not found'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -267,7 +317,6 @@ def delete_student():
                 return jsonify({'success': True})
 
         return jsonify({'success': False, 'message': 'Student not found'})
-
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -280,10 +329,12 @@ def search_student():
 
     if sheet and query:
         records = sheet.get_all_records()
-        results = [s for s in records if
-                   query in str(s.get('ID', '')).lower() or
-                   query in str(s.get('Name', '')).lower() or
-                   query in str(s.get('Class', '')).lower()]
+        results = [s for s in records
+                   if s.get('ID') and
+                   str(s.get('ID', '')).startswith('CS') and
+                   (query in str(s.get('ID', '')).lower() or
+                    query in str(s.get('Name', '')).lower() or
+                    query in str(s.get('Class', '')).lower())]
 
     return jsonify({'students': results})
 
@@ -305,9 +356,9 @@ def attendance():
         att_sheet   = get_sheet('attendance')
         att_records = []
         if att_sheet:
-            records    = att_sheet.get_all_records()
-            att_records = [r for r in records if
-                           str(r.get('Student_ID', '')) == student_id]
+            records     = att_sheet.get_all_records()
+            att_records = [r for r in records
+                           if str(r.get('Student_ID', '')) == student_id]
         return render_template('attendance.html',
                                role=role,
                                name=session.get('name'),
@@ -319,16 +370,17 @@ def attendance():
     if selected_class:
         students_sheet = get_sheet('students')
         if students_sheet:
-            all_students   = students_sheet.get_all_records()
-            class_students = [s for s in all_students if
-                              str(s.get('Class', '')) == selected_class
-                              and s.get('ID')]
+            all_s          = students_sheet.get_all_records()
+            class_students = [s for s in all_s
+                              if str(s.get('Class', '')) == selected_class
+                              and s.get('ID')
+                              and str(s.get('ID', '')).startswith('CS')]
 
         att_sheet = get_sheet('attendance')
         if att_sheet:
-            records      = att_sheet.get_all_records()
-            today_records = [r for r in records if
-                             r.get('Date') == today and
+            records       = att_sheet.get_all_records()
+            today_records = [r for r in records
+                             if r.get('Date') == today and
                              str(r.get('Class', '')) == selected_class]
             already_taken = len(today_records) > 0
 
@@ -353,9 +405,9 @@ def submit_attendance():
         if not sheet:
             return jsonify({'success': False})
 
-        records      = sheet.get_all_records()
-        today_records = [r for r in records if
-                         r.get('Date') == today and
+        records       = sheet.get_all_records()
+        today_records = [r for r in records
+                         if r.get('Date') == today and
                          str(r.get('Class', '')) == class_]
         if today_records:
             return jsonify({'success': False,
@@ -371,8 +423,7 @@ def submit_attendance():
             ], value_input_option='RAW')
 
         return jsonify({'success': True,
-                        'message': 'Attendance saved successfully!'})
-
+                        'message': 'Attendance saved!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -392,17 +443,21 @@ def fees():
         student    = []
         if sheet:
             records = sheet.get_all_records()
-            student = [s for s in records if str(s.get('ID', '')) == student_id]
+            student = [s for s in records
+                       if str(s.get('ID', '')) == student_id]
         return render_template('fees.html',
                                role=role,
                                name=session.get('name'),
-                               students=student)
+                               students=student,
+                               search='')
 
     sheet        = get_sheet('students')
     all_students = []
     if sheet:
         records      = sheet.get_all_records()
-        all_students = [s for s in records if s.get('ID')]
+        all_students = [s for s in records
+                        if s.get('ID') and
+                        str(s.get('ID', '')).startswith('CS')]
         if search:
             all_students = [s for s in all_students if
                             search in str(s.get('ID', '')).lower() or
@@ -424,7 +479,7 @@ def pay_fee():
 
         sheet = get_sheet('students')
         if not sheet:
-            return jsonify({'success': False})
+            return jsonify({'success': False, 'message': 'Sheet error'})
 
         records = sheet.get_all_records()
         for i, record in enumerate(records, start=2):
@@ -433,8 +488,6 @@ def pay_fee():
                 total_fee    = float(record.get('Total_Fee', 0) or 0)
                 new_paid     = current_paid + amount
                 new_balance  = total_fee - new_paid
-
-                # Hadduu balance negative noqdo 0 u dhig
                 if new_balance < 0:
                     new_balance = 0
 
@@ -447,7 +500,7 @@ def pay_fee():
                         datetime.now().strftime('%Y-%m-%d'),
                         student_id,
                         record.get('Name', ''),
-                        record.get('Class', ''),
+                        str(record.get('Class', '')),
                         amount,
                         total_fee,
                         new_balance
@@ -457,23 +510,49 @@ def pay_fee():
                     'success': True,
                     'new_paid': new_paid,
                     'new_balance': new_balance,
-                    'message': f'Payment of ${amount} recorded!'
+                    'message': f'Payment ${amount} recorded! Balance: ${new_balance}'
                 })
 
         return jsonify({'success': False, 'message': 'Student not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/edit_fee', methods=['POST'])
+@role_required('admin', 'fee')
+def edit_fee():
+    try:
+        data       = request.get_json()
+        student_id = data.get('student_id')
+        total_fee  = float(data.get('total_fee', 0))
+
+        sheet = get_sheet('students')
+        if not sheet:
+            return jsonify({'success': False})
+
+        records = sheet.get_all_records()
+        for i, record in enumerate(records, start=2):
+            if str(record.get('ID', '')) == student_id:
+                current_paid = float(record.get('Amount_Paid', 0) or 0)
+                new_balance  = total_fee - current_paid
+                if new_balance < 0:
+                    new_balance = 0
+
+                sheet.update_cell(i, 6, total_fee)
+                sheet.update_cell(i, 8, new_balance)
+
+                return jsonify({
+                    'success': True,
+                    'new_balance': new_balance,
+                    'message': 'Fee updated!'
+                })
+
+        return jsonify({'success': False, 'message': 'Student not found'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
 # ══════════════════════════════════════
 #   GRADES
 # ══════════════════════════════════════
-
-SUBJECTS = [
-    'Math', 'English', 'Science', 'Social Studies',
-    'Islamic Studies', 'Somali', 'Computer', 'History',
-    'Geography', 'Art', 'Physical Education'
-]
 
 @app.route('/grades')
 @login_required
@@ -482,8 +561,8 @@ def grades():
     search = request.args.get('search', '').lower()
 
     if role == 'student':
-        student_id    = session.get('student_id')
-        sheet         = get_sheet('grades')
+        student_id     = session.get('student_id')
+        sheet          = get_sheet('grades')
         student_grades = {'Term1': {}, 'Term2': {}}
 
         if sheet:
@@ -497,12 +576,22 @@ def grades():
                         student_grades[term][subject] = score
 
         def calc_avg(term_grades):
-            scores = [v for v in term_grades.values() if v]
+            scores = [float(v) for v in term_grades.values() if v]
             return round(sum(scores) / len(scores), 1) if scores else 0
 
         t1_avg = calc_avg(student_grades['Term1'])
         t2_avg = calc_avg(student_grades['Term2'])
-        final  = round((t1_avg + t2_avg) / 2, 1) if t1_avg and t2_avg else 0
+
+        # Final: haddii Term2 la gaarin, Term1 kaliya
+        if t1_avg and t2_avg:
+            final = round((t1_avg + t2_avg) / 2, 1)
+        elif t1_avg:
+            final = t1_avg
+        else:
+            final = 0
+
+        has_term1 = len(student_grades['Term1']) > 0
+        has_term2 = len(student_grades['Term2']) > 0
 
         return render_template('grades.html',
                                role=role,
@@ -511,13 +600,17 @@ def grades():
                                subjects=SUBJECTS,
                                t1_avg=t1_avg,
                                t2_avg=t2_avg,
-                               final=final)
+                               final=final,
+                               has_term1=has_term1,
+                               has_term2=has_term2)
 
     sheet        = get_sheet('students')
     all_students = []
     if sheet:
         records      = sheet.get_all_records()
-        all_students = [s for s in records if s.get('ID')]
+        all_students = [s for s in records
+                        if s.get('ID') and
+                        str(s.get('ID', '')).startswith('CS')]
         if search:
             all_students = [s for s in all_students if
                             search in str(s.get('ID', '')).lower() or
@@ -562,9 +655,7 @@ def save_grades():
                 subject, score, term, today
             ], value_input_option='RAW')
 
-        return jsonify({'success': True,
-                        'message': 'Grades saved successfully!'})
-
+        return jsonify({'success': True, 'message': 'Grades saved!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -596,8 +687,8 @@ def get_student_grades():
 def votes():
     role = session.get('role')
 
-    sheet        = get_sheet('candidates')
-    candidates   = []
+    sheet         = get_sheet('candidates')
+    candidates    = []
     election_open = False
 
     if sheet:
@@ -608,31 +699,43 @@ def votes():
                 candidates[0].get('Election_Status', 'closed')
             ).lower() == 'open'
 
-    already_voted = False
+    # Check already voted + who voted for
+    already_voted  = False
+    voted_for      = None
     if role == 'student':
         student_id  = session.get('student_id')
         votes_sheet = get_sheet('votes')
         if votes_sheet:
-            vote_records  = votes_sheet.get_all_records()
-            already_voted = any(
-                str(v.get('Student_ID', '')) == student_id
-                for v in vote_records
-            )
+            vote_records = votes_sheet.get_all_records()
+            for v in vote_records:
+                if str(v.get('Student_ID', '')) == student_id:
+                    already_voted = True
+                    voted_for     = str(v.get('Candidate_ID', ''))
+                    break
 
-    total_votes = sum(int(c.get('Votes', 0)) for c in candidates)
+    total_votes = sum(int(c.get('Votes', 0) or 0) for c in candidates)
     for c in candidates:
-        votes_count    = int(c.get('Votes', 0))
+        votes_count     = int(c.get('Votes', 0) or 0)
         c['percentage'] = round(
             (votes_count / total_votes * 100), 1
         ) if total_votes > 0 else 0
+
+    # Sort by votes for results
+    sorted_candidates = sorted(candidates,
+                                key=lambda x: int(x.get('Votes', 0) or 0),
+                                reverse=True)
+    winner = sorted_candidates[0] if sorted_candidates and total_votes > 0 else None
 
     return render_template('votes.html',
                            role=role,
                            name=session.get('name'),
                            candidates=candidates,
+                           sorted_candidates=sorted_candidates,
                            election_open=election_open,
                            already_voted=already_voted,
-                           total_votes=total_votes)
+                           voted_for=voted_for,
+                           total_votes=total_votes,
+                           winner=winner)
 
 @app.route('/submit_vote', methods=['POST'])
 @role_required('student')
@@ -642,31 +745,24 @@ def submit_vote():
         candidate_id = data.get('candidate_id')
         student_id   = session.get('student_id')
 
-        # Check already voted
         votes_sheet = get_sheet('votes')
         if not votes_sheet:
             return jsonify({'success': False, 'message': 'Error!'})
 
-        vote_records = votes_sheet.get_all_records()
-
-        # Hubi hal cod kaliya
+        # HAL COD KALIYA
+        vote_records  = votes_sheet.get_all_records()
         student_votes = [v for v in vote_records
-                        if str(v.get('Student_ID', '')) == student_id]
-
+                         if str(v.get('Student_ID', '')) == student_id]
         if len(student_votes) >= 1:
-            return jsonify({
-                'success': False,
-                'message': 'You have already voted! Each student can only vote once.'
-            })
+            return jsonify({'success': False,
+                            'message': 'You have already voted!'})
 
-        # Add vote
         votes_sheet.append_row([
             student_id,
             candidate_id,
             datetime.now().strftime('%Y-%m-%d')
         ], value_input_option='RAW')
 
-        # Update candidate votes
         candidates_sheet = get_sheet('candidates')
         if candidates_sheet:
             records = candidates_sheet.get_all_records()
@@ -676,11 +772,8 @@ def submit_vote():
                     candidates_sheet.update_cell(i, 4, current_votes + 1)
                     break
 
-        return jsonify({
-            'success': True,
-            'message': 'Vote submitted successfully! 🎉'
-        })
-
+        return jsonify({'success': True,
+                        'message': 'Vote submitted! 🎉'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -698,7 +791,6 @@ def toggle_election():
                 sheet.update_cell(i, 5, status)
 
         return jsonify({'success': True, 'status': status})
-
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -712,18 +804,15 @@ def add_candidate():
         photo        = request.files.get('photo')
 
         if not candidate_id or not name:
-            return jsonify({'success': False,
-                            'message': 'ID and Name required!'})
+            return jsonify({'success': False, 'message': 'ID and Name required!'})
 
         sheet = get_sheet('candidates')
         if not sheet:
             return jsonify({'success': False})
 
-        if photo:
+        if photo and photo.filename:
             filename = f"{candidate_id}.jpg"
-            filepath = os.path.join(
-                'static', 'images', 'candidates', filename
-            )
+            filepath = os.path.join('static', 'images', 'candidates', filename)
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
             photo.save(filepath)
 
@@ -731,9 +820,7 @@ def add_candidate():
             candidate_id, name, class_, 0, 'closed'
         ], value_input_option='RAW')
 
-        return jsonify({'success': True,
-                        'message': 'Candidate added!'})
-
+        return jsonify({'success': True, 'message': 'Candidate added!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -755,21 +842,14 @@ def update_candidate():
             if str(c.get('Candidate_ID', '')) == candidate_id:
                 sheet.update_cell(i, 2, name)
                 sheet.update_cell(i, 3, class_)
-
-                if photo:
+                if photo and photo.filename:
                     filename = f"{candidate_id}.jpg"
-                    filepath = os.path.join(
-                        'static', 'images', 'candidates', filename
-                    )
+                    filepath = os.path.join('static', 'images', 'candidates', filename)
                     os.makedirs(os.path.dirname(filepath), exist_ok=True)
                     photo.save(filepath)
+                return jsonify({'success': True, 'message': 'Updated!'})
 
-                return jsonify({'success': True,
-                                'message': 'Candidate updated!'})
-
-        return jsonify({'success': False,
-                        'message': 'Candidate not found'})
-
+        return jsonify({'success': False, 'message': 'Not found'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -790,9 +870,7 @@ def delete_candidate():
                 sheet.delete_rows(i)
                 return jsonify({'success': True})
 
-        return jsonify({'success': False,
-                        'message': 'Candidate not found'})
-
+        return jsonify({'success': False, 'message': 'Not found'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -804,9 +882,8 @@ def delete_candidate():
 @login_required
 def announcement():
     role = session.get('role')
-
     try:
-        sheet = get_sheet('users')
+        sheet             = get_sheet('users')
         announcement_text = ''
         if sheet:
             try:
@@ -831,9 +908,7 @@ def save_announcement():
         sheet = get_sheet('users')
         if sheet:
             sheet.update_acell('E1', text)
-        return jsonify({'success': True,
-                        'message': 'Announcement saved!'})
-
+        return jsonify({'success': True, 'message': 'Saved!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -851,9 +926,7 @@ def upload_photo():
         file       = request.files['photo']
         student_id = session.get('student_id')
         filename   = f"{student_id}.jpg"
-        filepath   = os.path.join(
-            'static', 'images', 'students', filename
-        )
+        filepath   = os.path.join('static', 'images', 'students', filename)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         file.save(filepath)
 
@@ -861,7 +934,6 @@ def upload_photo():
             'success': True,
             'photo_url': f'/static/images/students/{filename}'
         })
-
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
