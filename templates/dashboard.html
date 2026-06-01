@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static',filename='images/logo.png') }}">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1565C0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js');});}</script>
+</head>
+<body class="dashboard-body">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<img src="{{ url_for('static',filename='images/logo.png') }}" alt="Logo" class="sidebar-logo">
+<span class="sidebar-title">School System</span>
+</div>
+<nav class="sidebar-nav">
+<a href="{{ url_for('dashboard') }}" class="nav-item active"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+<a href="{{ url_for('grades') }}" class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+<a href="{{ url_for('fees') }}" class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+<a href="{{ url_for('monthly_fees') }}" class="nav-item"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+{% if role in ['admin','attendance'] %}
+<a href="{{ url_for('attendance') }}" class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+{% endif %}
+<a href="{{ url_for('votes') }}" class="nav-item"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+<a href="{{ url_for('announcement') }}" class="nav-item"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+<a href="{{ url_for('id_cards') }}" class="nav-item"><span class="nav-icon">🪪</span><span class="nav-text">{% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}</span></a>
+</nav>
+<div class="sidebar-logout">
+<a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+</div>
+</div>
+<div class="main-content" id="mainContent">
+<div class="navbar">
+<div class="navbar-left">
+<button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+<span class="navbar-title">School Management System</span>
+</div>
+<div class="navbar-right">
+<div class="user-badge">👤 {{ name }} <span style="color:var(--secondary);font-size:.8rem;">({{ role|title }})</span></div>
+</div>
+</div>
+<div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:350px;width:90%;"></div>
+<div class="page-content">
+
+{% if role == 'admin' %}
+<div class="welcome-card"><h2>👋 Welcome, Admin!</h2><p id="currentDate">School Management System</p></div>
+<div class="stats-grid">
+<div class="stat-card blue" onclick="openModal('studentsModal')" style="cursor:pointer;">
+<div class="stat-icon">👨‍🎓</div><div class="stat-number">{{ total_students }}</div>
+<div class="stat-label">Total Students</div>
+<div style="margin-top:8px;font-size:.75rem;color:var(--primary);font-weight:600;">Click to manage →</div>
+</div>
+<div class="stat-card teal" onclick="window.location='/fees'" style="cursor:pointer;">
+<div class="stat-icon">💰</div><div class="stat-number">${{ total_collected }}</div>
+<div class="stat-label">Fees Collected</div>
+<div style="margin-top:8px;font-size:.75rem;color:var(--secondary);font-weight:600;">Click to manage →</div>
+</div>
+<div class="stat-card gold" onclick="window.location='/attendance'" style="cursor:pointer;">
+<div class="stat-icon">📋</div><div class="stat-number">{{ attendance_rate }}%</div>
+<div class="stat-label">Attendance Rate</div>
+<div style="margin-top:8px;font-size:.75rem;color:var(--accent);font-weight:600;">Click to manage →</div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">👨‍🎓 Student Management</div>
+<div class="action-buttons">
+<button class="btn btn-primary" onclick="openModal('searchModal')">🔍 Search Student</button>
+<button class="btn btn-success" onclick="openModal('addModal')">➕ Add Student</button>
+<button class="btn btn-danger" onclick="openModal('deleteModal')">🗑️ Delete Student</button>
+</div>
+</div>
+<div class="card" style="border:2px solid var(--primary);">
+<div class="card-title">🎓 New School Year — Promote Students</div>
+<p style="color:var(--subtext);margin-bottom:15px;font-size:.9rem;">
+✅ 50%+ = promoted to next class &nbsp;|&nbsp; ❌ 49%- = stays same class &nbsp;|&nbsp; 🎓 Class 4 pass = Graduated
+</p>
+<button onclick="confirmPromote()" style="width:100%;padding:15px;background:linear-gradient(135deg,#1A237E,#1565C0);color:white;border:none;border-radius:var(--radius-sm);font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">🎓 Start New School Year</button>
+<div id="promoteResult" style="margin-top:15px;"></div>
+</div>
+
+{% elif role == 'fee' %}
+<div class="welcome-card"><h2>👋 Welcome, Fee Admin!</h2><p>Manage student fees and payments</p></div>
+<div class="card"><div class="card-title">💰 Quick Actions</div>
+<div class="action-buttons">
+<button class="btn btn-primary" onclick="openModal('searchModal')">🔍 Search Student</button>
+<a href="{{ url_for('fees') }}" class="btn btn-success">💰 Manage Fees</a>
+</div></div>
+
+{% elif role == 'attendance' %}
+<div class="welcome-card"><h2>👋 Welcome, Attendance Admin!</h2><p>Take daily student attendance</p></div>
+<div class="card"><div class="card-title">📋 Quick Actions</div>
+<div class="action-buttons">
+<button class="btn btn-primary" onclick="openModal('searchModal')">🔍 Search Student</button>
+<a href="{{ url_for('attendance') }}" class="btn btn-success">📋 Take Attendance</a>
+</div></div>
+
+{% elif role == 'grades' %}
+<div class="welcome-card"><h2>👋 Welcome, Grades Admin!</h2><p>Manage student examination results</p></div>
+<div class="card"><div class="card-title">📊 Quick Actions</div>
+<div class="action-buttons">
+<button class="btn btn-primary" onclick="openModal('searchModal')">🔍 Search Student</button>
+<a href="{{ url_for('grades') }}" class="btn btn-success">📊 Manage Grades</a>
+</div></div>
+
+{% elif role == 'student' %}
+{% if student.get('Status') == 'Graduated' %}
+<div style="background:linear-gradient(135deg,#1A237E,#1565C0,#00796B);border-radius:var(--radius);padding:35px;text-align:center;color:white;margin-bottom:25px;animation:slideUp .5s ease;position:relative;overflow:hidden;">
+<div style="position:absolute;font-size:8rem;opacity:.1;right:-10px;top:-10px;">🎓</div>
+<div style="font-size:4rem;margin-bottom:15px;">🎓</div>
+<h2 style="font-size:1.8rem;font-weight:900;margin-bottom:8px;">Congratulations! 🎉</h2>
+<p style="font-size:1.1rem;opacity:.95;">{{ student.get('Name', name) }}</p>
+<p style="opacity:.85;margin-top:5px;">You have successfully <strong>Graduated!</strong> 🌟</p>
+</div>
+{% endif %}
+<div class="profile-header">
+<div style="position:relative;display:inline-block;">
+<img src="{{ url_for('static',filename='images/students/'+session.get('student_id','')+'.jpg') }}"
+     alt="Profile" class="profile-photo" id="profilePhoto"
+     onerror="this.src='{{ url_for('static',filename='images/logo.png') }}'">
+<div onclick="document.getElementById('photoInput').click()"
+     style="position:absolute;bottom:5px;right:5px;background:var(--accent);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;">📷</div>
+</div>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+<h2 style="margin-top:15px;">{{ student.get('Name', name) }}</h2>
+<p>ID: {{ student.get('ID','') }} | Class: {{ student.get('Class','') }}
+{% if student.get('Status') == 'Graduated' %}
+| <span style="background:rgba(255,215,0,.3);padding:2px 10px;border-radius:10px;">🎓 Graduated</span>
+{% endif %}
+</p>
+</div>
+<div class="info-grid">
+<div class="info-card teal">
+<div class="info-card-icon">💰</div>
+<div class="info-card-title">MY FEES</div>
+<div style="font-size:.9rem;">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span>Total:</span><strong>${{ student.get('Total_Fee',0) }}</strong></div>
+<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span>Paid:</span><strong style="color:var(--success);">${{ student.get('Amount_Paid',0) }}</strong></div>
+<div style="display:flex;justify-content:space-between;"><span>Balance:</span><strong style="color:var(--error);">${{ student.get('Balance',0) }}</strong></div>
+</div>
+</div>
+<div class="info-card">
+<div class="info-card-icon">📚</div>
+<div class="info-card-title">QUICK ACCESS</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+<a href="{{ url_for('grades') }}" class="btn btn-primary" style="font-size:.85rem;padding:8px 16px;">📊 My Grades</a>
+<a href="{{ url_for('fees') }}" class="btn btn-success" style="font-size:.85rem;padding:8px 16px;">💰 My Fees</a>
+<a href="{{ url_for('votes') }}" class="btn btn-gold" style="font-size:.85rem;padding:8px 16px;">🗳️ Vote</a>
+</div>
+</div>
+</div>
+{% endif %}
+
+</div>
+</div>
+
+<!-- SEARCH MODAL -->
+<div class="modal-overlay" id="searchModal" style="display:none;">
+<div class="modal">
+<div class="modal-title">🔍 Search Student</div>
+<input type="text" class="search-input" id="searchInput" placeholder="Search by ID, Name or Class..."
+       oninput="liveSearch(this.value)" style="width:100%;margin-bottom:15px;">
+<div id="searchResults" style="max-height:400px;overflow-y:auto;">
+<p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p>
+</div>
+<div style="margin-top:15px;text-align:right;">
+<button class="btn btn-danger" onclick="closeModal('searchModal')">✖ Close</button>
+</div>
+</div>
+</div>
+
+<!-- ALL STUDENTS MODAL -->
+<div class="modal-overlay" id="studentsModal" style="display:none;">
+<div class="modal" style="max-width:700px;">
+<div class="modal-title">👨‍🎓 All Students</div>
+<input type="text" class="search-input" id="allSearch" placeholder="Search..." oninput="searchAll(this.value)" style="width:100%;margin-bottom:15px;">
+<div id="allResults" style="max-height:400px;overflow-y:auto;">
+<p style="color:var(--subtext);text-align:center;padding:20px;"><span class="spinner" style="border-color:var(--primary);border-top-color:transparent;display:inline-block;"></span> Loading...</p>
+</div>
+<div style="margin-top:15px;text-align:right;">
+<button class="btn btn-danger" onclick="closeModal('studentsModal')">✖ Close</button>
+</div>
+</div>
+</div>
+
+{% if role == 'admin' %}
+<!-- ADD STUDENT MODAL -->
+<div class="modal-overlay" id="addModal" style="display:none;">
+<div class="modal">
+<div class="modal-title">➕ Add New Student</div>
+<div class="form-row">
+<div class="form-group"><label>Full Name *</label><input type="text" class="form-control" id="addName" placeholder="Student full name"></div>
+<div class="form-group"><label>Class *</label><select class="form-control" id="addClass"><option value="1">Class 1</option><option value="2">Class 2</option><option value="3">Class 3</option><option value="4">Class 4</option></select></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>Phone</label><input type="text" class="form-control" id="addPhone" placeholder="Phone number"></div>
+<div class="form-group"><label>Total Fee ($)</label><input type="number" class="form-control" id="addFee" value="500"></div>
+</div>
+<div id="addResult" style="margin-bottom:15px;"></div>
+<div style="display:flex;gap:10px;justify-content:flex-end;">
+<button class="btn btn-danger" onclick="closeModal('addModal')">✖ Cancel</button>
+<button class="btn btn-success" onclick="addStudent()">➕ Add Student</button>
+</div>
+</div>
+</div>
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteModal" style="display:none;">
+<div class="modal">
+<div class="modal-title">🗑️ Delete Student</div>
+<input type="text" class="search-input" id="delInput" placeholder="Search student to delete..." oninput="delSearch(this.value)" style="width:100%;margin-bottom:15px;">
+<div id="delResults" style="max-height:350px;overflow-y:auto;"><p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p></div>
+<div style="margin-top:15px;text-align:right;"><button class="btn btn-danger" onclick="closeModal('deleteModal')">✖ Close</button></div>
+</div>
+</div>
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal" style="display:none;">
+<div class="modal">
+<div class="modal-title">✏️ Edit Student</div>
+<input type="hidden" id="editId">
+<div class="form-row">
+<div class="form-group"><label>Full Name</label><input type="text" class="form-control" id="editName"></div>
+<div class="form-group"><label>Class</label><select class="form-control" id="editClass"><option value="1">Class 1</option><option value="2">Class 2</option><option value="3">Class 3</option><option value="4">Class 4</option></select></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>Phone</label><input type="text" class="form-control" id="editPhone"></div>
+<div class="form-group"><label>Total Fee ($)</label><input type="number" class="form-control" id="editFee"></div>
+</div>
+<div id="editResult" style="margin-bottom:15px;"></div>
+<div style="display:flex;gap:10px;justify-content:flex-end;">
+<button class="btn btn-danger" onclick="closeModal('editModal')">✖ Cancel</button>
+<button class="btn btn-success" onclick="saveEdit()">💾 Save</button>
+</div>
+</div>
+</div>
+<!-- PROMOTE RESULTS MODAL -->
+<div class="modal-overlay" id="promoteModal" style="display:none;">
+<div class="modal" style="max-width:650px;">
+<div class="modal-title">🎓 Promotion Results</div>
+<div id="promoteContent" style="max-height:450px;overflow-y:auto;"></div>
+<div style="margin-top:15px;text-align:right;">
+<button class="btn btn-success" onclick="closeModal('promoteModal');location.reload();">✅ Done</button>
+</div>
+</div>
+</div>
+{% endif %}
+
+<script>
+function toggleSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay'),m=window.innerWidth<=768;if(m){s.classList.toggle('mobile-open');if(o)o.classList.toggle('active');}else{s.classList.toggle('collapsed');var c=document.getElementById('mainContent');if(c)c.classList.toggle('expanded');}}
+function closeSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay');if(s)s.classList.remove('mobile-open');if(o)o.classList.remove('active');}
+function openModal(id){var el=document.getElementById(id);if(el){el.style.display='flex';document.body.style.overflow='hidden';if(id==='studentsModal')loadAll();}}
+function closeModal(id){var el=document.getElementById(id);if(el){el.style.display='none';document.body.style.overflow='';}}
+function showAlert(msg,type){type=type||'success';var c=document.getElementById('alertContainer');if(!c)return;var el=document.createElement('div');el.className='alert alert-'+type;el.innerHTML=(type==='success'?'✅':'❌')+' '+msg;c.appendChild(el);setTimeout(function(){el.style.opacity='0';el.style.transition='opacity 0.3s';setTimeout(function(){el.remove();},300);},3500);}
+document.querySelectorAll('.modal-overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o){o.style.display='none';document.body.style.overflow='';}});});
+
+function liveSearch(q){
+  if(q.length<1){document.getElementById('searchResults').innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p>';return;}
+  var role='{{ role }}';
+  fetch('/search_student?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(data){
+    var c=document.getElementById('searchResults');
+    if(!data.students.length){c.innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">No students found</p>';return;}
+    var html='';
+    data.students.forEach(function(s){
+      var btns='';
+      if(role==='admin'){btns='<div style="display:flex;flex-direction:column;gap:4px;min-width:100px;"><a href="/fees?search='+s.ID+'" class="btn btn-success" style="padding:4px 8px;font-size:.75rem;text-align:center;">💰 Fees</a><a href="/attendance?class='+s.Class+'" class="btn btn-primary" style="padding:4px 8px;font-size:.75rem;text-align:center;">📋 Att.</a><a href="/grades?search='+s.ID+'" class="btn btn-gold" style="padding:4px 8px;font-size:.75rem;text-align:center;">📊 Grades</a><button onclick="openEdit(\''+s.ID+'\',\''+encodeURIComponent(s.Name||'')+'\',\''+s.Class+'\',\''+(s.Phone||'')+'\',\''+(s.Total_Fee||0)+'\')" class="btn btn-warning" style="padding:4px 8px;font-size:.75rem;">✏️ Edit</button></div>';}
+      else if(role==='fee'){btns='<a href="/fees?search='+s.ID+'" class="btn btn-success" style="padding:5px 12px;font-size:.8rem;">💰 Fees</a>';}
+      else if(role==='attendance'){btns='<a href="/attendance?class='+s.Class+'" class="btn btn-primary" style="padding:5px 12px;font-size:.8rem;">📋 Att.</a>';}
+      else if(role==='grades'){btns='<a href="/grades?search='+s.ID+'" class="btn btn-gold" style="padding:5px 12px;font-size:.8rem;">📊 Grades</a>';}
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px;border-bottom:1px solid #f0f0f0;gap:8px;flex-wrap:wrap;"><div style="flex:1;"><strong style="color:var(--primary);">'+s.ID+'</strong> | <strong>'+(s.Name||'')+'</strong> <span style="color:var(--subtext);font-size:.82rem;">Class '+s.Class+'</span>'+(s.Status==='Graduated'?' <span style="background:#fff9e6;color:#F57F17;padding:1px 7px;border-radius:8px;font-size:.72rem;">🎓</span>':'')+'</div>'+btns+'</div>';
+    });
+    c.innerHTML=html;
+  });
+}
+function openEdit(id,en,cls,phone,fee){var name=decodeURIComponent(en);document.getElementById('editId').value=id;document.getElementById('editName').value=name;document.getElementById('editClass').value=cls;document.getElementById('editPhone').value=phone;document.getElementById('editFee').value=fee;document.getElementById('editResult').innerHTML='';openModal('editModal');}
+function saveEdit(){
+  var id=document.getElementById('editId').value;var name=document.getElementById('editName').value.trim();var cls=document.getElementById('editClass').value;var phone=document.getElementById('editPhone').value.trim();var fee=document.getElementById('editFee').value;
+  if(!name){document.getElementById('editResult').innerHTML='<div class="alert alert-error">❌ Name required!</div>';return;}
+  var btn=event.target;btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  fetch('/edit_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:id,name:name,'class':cls,phone:phone,total_fee:fee})})
+  .then(function(r){return r.json();}).then(function(d){btn.innerHTML='💾 Save';btn.disabled=false;if(d.success){document.getElementById('editResult').innerHTML='<div class="alert alert-success">✅ Updated!</div>';setTimeout(function(){closeModal('editModal');location.reload();},1500);}else{document.getElementById('editResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}});
+}
+function addStudent(){
+  var name=document.getElementById('addName').value.trim();var cls=document.getElementById('addClass').value;var phone=document.getElementById('addPhone').value.trim();var fee=document.getElementById('addFee').value;
+  if(!name){document.getElementById('addResult').innerHTML='<div class="alert alert-error">❌ Name required!</div>';return;}
+  var btn=event.target;btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  var fd=new FormData();fd.append('name',name);fd.append('class',cls);fd.append('phone',phone);fd.append('total_fee',fee);
+  fetch('/add_student',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){btn.innerHTML='➕ Add Student';btn.disabled=false;if(d.success){document.getElementById('addResult').innerHTML='<div class="alert alert-success">✅ '+d.message+'</div>';setTimeout(function(){closeModal('addModal');location.reload();},2000);}else{document.getElementById('addResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}});
+}
+function delSearch(q){
+  if(q.length<1){document.getElementById('delResults').innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p>';return;}
+  fetch('/search_student?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(data){
+    var c=document.getElementById('delResults');
+    if(!data.students.length){c.innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">No students found</p>';return;}
+    var html='';
+    data.students.forEach(function(s){html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px;border-bottom:1px solid #f0f0f0;"><div><strong>'+(s.Name||'')+'</strong><span style="color:var(--subtext);font-size:.82rem;margin-left:8px;">'+s.ID+' | Class '+s.Class+'</span></div><button class="btn btn-danger" style="padding:5px 12px;font-size:.8rem;" onclick="doDelete(\''+s.ID+'\',\''+s.Name+'\')">🗑️ Delete</button></div>';});
+    c.innerHTML=html;
+  });
+}
+function doDelete(id,name){
+  if(!confirm('Delete '+name+'?\nCannot be undone!'))return;
+  fetch('/delete_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:id})})
+  .then(function(r){return r.json();}).then(function(d){if(d.success){showAlert('✅ '+name+' deleted!','success');setTimeout(function(){location.reload();},1500);}else{showAlert('❌ '+d.message,'error');}});
+}
+function loadAll(){
+  fetch('/search_student?q=cs').then(function(r){return r.json();}).then(function(d){renderAll(d.students);}).catch(function(){document.getElementById('allResults').innerHTML='<p style="color:var(--error);text-align:center;">Error loading</p>';});
+}
+function searchAll(q){fetch('/search_student?q='+(q.length<1?'cs':encodeURIComponent(q))).then(function(r){return r.json();}).then(function(d){renderAll(d.students);});}
+function renderAll(students){
+  var c=document.getElementById('allResults');
+  if(!students||!students.length){c.innerHTML='<p style="text-align:center;color:var(--subtext);">No students found</p>';return;}
+  var html='<table style="width:100%;border-collapse:collapse;"><thead><tr style="background:linear-gradient(135deg,var(--dark),var(--primary));color:white;"><th style="padding:9px;">ID</th><th>Name</th><th>Class</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+  students.forEach(function(s){var bal=parseFloat(s.Balance||0);html+='<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:9px;"><span class="badge badge-primary">'+s.ID+'</span></td><td><strong>'+(s.Name||'')+'</strong></td><td>Class '+s.Class+'</td><td style="color:'+(bal>0?'var(--error)':'var(--success)')+';font-weight:700;">$'+bal+'</td><td>'+(s.Status==='Graduated'?'<span style="background:#fff9e6;color:#F57F17;padding:2px 7px;border-radius:8px;font-size:.75rem;">🎓 Grad</span>':'<span style="background:#e8f5e9;color:var(--success);padding:2px 7px;border-radius:8px;font-size:.75rem;">✅ Active</span>')+'</td><td><button onclick="openEdit(\''+s.ID+'\',\''+encodeURIComponent(s.Name||'')+'\',\''+s.Class+'\',\''+(s.Phone||'')+'\',\''+(s.Total_Fee||0)+'\')" class="btn btn-warning" style="padding:5px 9px;font-size:.75rem;">✏️ Edit</button></td></tr>';});
+  html+='</tbody></table>';
+  c.innerHTML=html;
+}
+function confirmPromote(){
+  if(!confirm('Start New School Year?\n\n✅ 50%+ → Next Class\n❌ 49%- → Same Class\n🎓 Class 4 Pass → Graduate\n\nContinue?'))return;
+  var btn=event.target;btn.innerHTML='<span class="spinner"></span> Processing...';btn.disabled=true;
+  fetch('/promote_students',{method:'POST',headers:{'Content-Type':'application/json'}})
+  .then(function(r){return r.json();}).then(function(data){
+    btn.innerHTML='🎓 Start New School Year';btn.disabled=false;
+    if(data.success){
+      var r=data.results;
+      var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">';
+      html+='<div style="background:#e8f5e9;border-radius:var(--radius-sm);padding:14px;text-align:center;"><div style="font-size:1.7rem;font-weight:800;color:var(--success);">'+r.promoted.length+'</div><div style="font-size:.8rem;color:var(--success);">Promoted</div></div>';
+      html+='<div style="background:#fff9e6;border-radius:var(--radius-sm);padding:14px;text-align:center;"><div style="font-size:1.7rem;font-weight:800;color:#F57F17;">'+r.graduated.length+'</div><div style="font-size:.8rem;color:#F57F17;">Graduated</div></div>';
+      html+='<div style="background:#ffebee;border-radius:var(--radius-sm);padding:14px;text-align:center;"><div style="font-size:1.7rem;font-weight:800;color:var(--error);">'+r.failed.length+'</div><div style="font-size:.8rem;color:var(--error);">Failed</div></div></div>';
+      r.graduated.forEach(function(s){html+='<div style="background:#fff9e6;border-left:4px solid #FFD700;padding:9px 14px;border-radius:var(--radius-sm);margin-bottom:5px;font-size:.86rem;display:flex;justify-content:space-between;">🎓 <strong>'+s.name+'</strong> ('+s.id+') → Graduated! <span style="color:#F57F17;font-weight:700;">'+s.avg+'%</span></div>';});
+      r.promoted.forEach(function(s){html+='<div style="background:#e8f5e9;border-left:4px solid var(--success);padding:9px 14px;border-radius:var(--radius-sm);margin-bottom:5px;font-size:.86rem;display:flex;justify-content:space-between;">✅ <strong>'+s.name+'</strong> Class '+s.from_class+'→'+s.to_class+' <span style="color:var(--success);font-weight:700;">'+s.avg+'%</span></div>';});
+      r.failed.forEach(function(s){html+='<div style="background:#ffebee;border-left:4px solid var(--error);padding:9px 14px;border-radius:var(--radius-sm);margin-bottom:5px;font-size:.86rem;display:flex;justify-content:space-between;">❌ <strong>'+s.name+'</strong> Stays Class '+s.class+' <span style="color:var(--error);font-weight:700;">'+s.avg+'%</span></div>';});
+      document.getElementById('promoteContent').innerHTML=html;
+      openModal('promoteModal');
+    }else{showAlert('❌ '+data.message,'error');}
+  }).catch(function(){btn.innerHTML='🎓 Start New School Year';btn.disabled=false;showAlert('❌ Connection error!','error');});
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var d=document.getElementById('currentDate');
+  if(d)d.textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var pi=document.getElementById('photoInput');var pp=document.getElementById('profilePhoto');
+  if(pi&&pp){pi.addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(e){pp.src=e.target.result;};rd.readAsDataURL(f);var fd=new FormData();fd.append('photo',f);fetch('/upload_photo',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){if(d.success)showAlert('Photo updated!','success');});});}
+});
+</script>
+</body>
+</html>

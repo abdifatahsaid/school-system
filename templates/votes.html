@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="so">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Election - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static',filename='images/logo.png') }}">
+<style>
+/* ── ANIMATIONS ── */
+@keyframes bounceIn{0%{opacity:0;transform:scale(.4) translateY(40px);}70%{transform:scale(1.08);}100%{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,.4);}50%{box-shadow:0 0 0 14px rgba(46,125,50,0);}}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+@keyframes rankSlide{from{opacity:0;transform:translateX(-30px);}to{opacity:1;transform:translateX(0);}}
+@keyframes livePulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes crownBounce{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-8px) rotate(5deg);}}
+@keyframes winner-glow{0%,100%{box-shadow:0 0 20px rgba(255,215,0,.4),0 8px 32px rgba(0,0,0,.2);}50%{box-shadow:0 0 40px rgba(255,215,0,.8),0 8px 32px rgba(0,0,0,.2);}}
+
+/* ── HERO ── */
+.hero-open{background:linear-gradient(135deg,#1B5E20,#2E7D32,#00897B);}
+.hero-closed{background:linear-gradient(135deg,#0D1B5E,#1565C0,#283593);}
+.hero-results{background:linear-gradient(135deg,#4A148C,#7B1FA2,#E91E63);}
+
+/* ── CONTROL BUTTONS ── */
+.ctrl-wrap{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-bottom:28px;}
+.ctrl-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 32px;border:none;border-radius:18px;color:white;cursor:pointer;font-family:inherit;font-weight:800;font-size:.9rem;transition:all .3s;min-width:155px;position:relative;overflow:hidden;}
+.ctrl-btn::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .2s;}
+.ctrl-btn:hover::before{background:rgba(255,255,255,.1);}
+.ctrl-btn:hover{transform:translateY(-6px);}
+.ctrl-btn:active{transform:translateY(-2px);}
+.ctrl-btn .icon{font-size:2.2rem;line-height:1;}
+.ctrl-btn .sub{font-size:.72rem;opacity:.82;font-weight:500;}
+.btn-start{background:linear-gradient(135deg,#2E7D32,#43A047);box-shadow:0 8px 24px rgba(46,125,50,.45);}
+.btn-end  {background:linear-gradient(135deg,#B71C1C,#E53935);box-shadow:0 8px 24px rgba(183,28,28,.45);}
+.btn-add  {background:linear-gradient(135deg,#1565C0,#1E88E5);box-shadow:0 8px 24px rgba(21,101,192,.45);}
+.btn-reset{background:linear-gradient(135deg,#E65100,#FF6D00);box-shadow:0 8px 24px rgba(230,81,0,.45);}
+
+/* ── LIVE BADGE ── */
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border-radius:20px;padding:5px 14px;font-size:.82rem;font-weight:700;}
+.live-dot{width:9px;height:9px;border-radius:50%;background:#ff5252;animation:livePulse 1.2s ease infinite;}
+
+/* ── CANDIDATE CARDS (voting) ── */
+.cands-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;}
+.cand-vote-card{background:white;border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.09);border:2.5px solid transparent;transition:all .3s;cursor:pointer;position:relative;}
+.cand-vote-card:hover{transform:translateY(-8px);box-shadow:0 12px 40px rgba(0,0,0,.18);border-color:var(--primary);}
+.cand-vote-card.voted-for{border-color:#2E7D32;box-shadow:0 8px 32px rgba(46,125,50,.3);}
+.cand-vote-card.disabled-card{opacity:.55;cursor:not-allowed;pointer-events:none;}
+.cand-photo-wrap{width:100%;height:150px;background:linear-gradient(135deg,#e8eaf6,#f5f5f5);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+.cand-photo-wrap img{width:100%;height:100%;object-fit:cover;}
+.cand-photo-fb{font-size:4rem;color:#bdbdbd;}
+.cand-number{position:absolute;top:8px;left:8px;background:linear-gradient(135deg,#1565C0,#0D47A1);color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.cand-body{padding:14px 14px 16px;}
+.cand-name{font-weight:800;font-size:.95rem;color:#1a1a2e;margin-bottom:3px;}
+.cand-class{font-size:.78rem;color:#90a4ae;font-weight:600;}
+.vote-btn{width:100%;margin-top:12px;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#1565C0,#1E88E5);color:white;font-weight:800;font-size:.88rem;cursor:pointer;transition:all .25s;}
+.vote-btn:hover{background:linear-gradient(135deg,#0D47A1,#1565C0);transform:scale(1.03);}
+.vote-btn:disabled{background:#e0e0e0;color:#9e9e9e;cursor:not-allowed;transform:none;}
+.voted-badge{position:absolute;top:8px;right:8px;background:#2E7D32;color:white;border-radius:10px;padding:3px 10px;font-size:.7rem;font-weight:700;}
+
+/* ── LIVE RESULTS (during election) ── */
+.live-results{background:linear-gradient(135deg,#0D1B5E,#1565C0);border-radius:18px;padding:24px;margin-bottom:24px;color:white;}
+.live-title{font-weight:800;font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.rank-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,.1);border-radius:12px;margin-bottom:8px;animation:rankSlide .4s ease both;}
+.rank-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;flex-shrink:0;}
+.rank-1{background:linear-gradient(135deg,#FFD700,#FFA000);color:#1a1a2e;}
+.rank-2{background:linear-gradient(135deg,#B0BEC5,#78909C);color:white;}
+.rank-3{background:linear-gradient(135deg,#A1887F,#6D4C41);color:white;}
+.rank-n{background:rgba(255,255,255,.15);color:white;}
+.rank-bar-wrap{flex:1;height:8px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden;}
+.rank-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#FFD700,#FF9800);transition:width 1s ease;}
+.rank-pct{font-size:.78rem;font-weight:700;min-width:38px;text-align:right;}
+
+/* ── FINAL RESULTS ── */
+.winner-card{background:linear-gradient(135deg,#4A148C,#7B1FA2);border-radius:20px;padding:30px;text-align:center;color:white;margin-bottom:24px;animation:winner-glow 2s ease infinite;}
+.crown{font-size:3.5rem;animation:crownBounce 2s ease infinite;}
+.winner-name{font-size:1.6rem;font-weight:900;margin:10px 0 4px;}
+.winner-votes{font-size:1rem;opacity:.9;}
+.podium-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:24px;}
+.podium-card{border-radius:16px;padding:20px 16px;text-align:center;color:white;position:relative;overflow:hidden;}
+.podium-1{background:linear-gradient(135deg,#F57F17,#FF8F00);box-shadow:0 8px 28px rgba(255,143,0,.4);}
+.podium-2{background:linear-gradient(135deg,#455A64,#546E7A);box-shadow:0 6px 20px rgba(69,90,100,.4);}
+.podium-3{background:linear-gradient(135deg,#6D4C41,#8D6E63);box-shadow:0 6px 20px rgba(109,76,65,.4);}
+.podium-n{background:linear-gradient(135deg,#1565C0,#1976D2);}
+.podium-rank{font-size:2rem;margin-bottom:8px;}
+.podium-name{font-weight:800;font-size:.9rem;margin-bottom:6px;}
+.podium-votes{font-size:.8rem;opacity:.85;font-weight:600;}
+.podium-pct{font-size:.75rem;background:rgba(255,255,255,.2);border-radius:10px;padding:2px 8px;margin-top:4px;display:inline-block;}
+.timer-box{background:linear-gradient(135deg,#1A237E,#1565C0);border-radius:16px;padding:16px 20px;text-align:center;color:white;margin-bottom:20px;}
+.timer-digits{font-size:2.4rem;font-weight:900;letter-spacing:5px;font-family:monospace;}
+
+/* ── CONFIRM OVERLAY ── */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:3000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);padding:20px;}
+.confirm-box{background:white;border-radius:24px;padding:36px 30px;max-width:420px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:bounceIn .4s cubic-bezier(.34,1.56,.64,1);}
+.confirm-icon{font-size:3.5rem;margin-bottom:12px;}
+.confirm-title{font-weight:900;font-size:1.2rem;color:#1a1a2e;margin-bottom:8px;}
+.confirm-sub{color:#607d8b;font-size:.9rem;margin-bottom:24px;line-height:1.6;}
+.confirm-btns{display:flex;gap:10px;justify-content:center;}
+.cbtn{padding:12px 30px;border-radius:12px;border:none;font-weight:800;font-size:.9rem;cursor:pointer;transition:all .25s;}
+.cbtn:hover{transform:translateY(-3px);}
+.cbtn-yes{background:linear-gradient(135deg,#1565C0,#1E88E5);color:white;box-shadow:0 4px 16px rgba(21,101,192,.4);}
+.cbtn-no {background:#f5f5f5;color:#455a64;}
+
+/* ── TITLE EDIT ── */
+.election-title-display{font-size:1.5rem;font-weight:900;cursor:pointer;border-bottom:2px dashed rgba(255,255,255,.4);padding-bottom:2px;transition:all .2s;display:inline-block;}
+.election-title-display:hover{border-bottom-color:rgba(255,255,255,.9);}
+.election-title-input{font-size:1.4rem;font-weight:900;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.6);border-radius:10px;color:white;padding:5px 12px;width:100%;max-width:420px;outline:none;}
+.election-title-input::placeholder{color:rgba(255,255,255,.5);}
+
+/* ── ADD CANDIDATE MODAL ── */
+.cand-preview{background:linear-gradient(135deg,#e3f2fd,#e8eaf6);border-radius:12px;padding:14px;margin-bottom:14px;display:none;}
+.cand-preview.show{display:block;}
+.found-tag{display:inline-block;background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700;margin-bottom:8px;}
+
+/* ── ADMIN CANDIDATE ROW ── */
+.cand-admin-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f0f4ff;transition:background .2s;}
+.cand-admin-row:hover{background:#f8f9ff;}
+.cand-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #e8eaf6;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;overflow:hidden;}
+.cand-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+</style>
+</head>
+<body class="dashboard-body">
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="{{ url_for('static',filename='images/logo.png') }}" alt="Logo" class="sidebar-logo">
+    <span class="sidebar-title">School System</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}"    class="nav-item"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+    <a href="{{ url_for('grades') }}"       class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+    <a href="{{ url_for('fees') }}"         class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+    <a href="{{ url_for('monthly_fees') }}" class="nav-item"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+    {% if role in ['admin','attendance'] %}
+    <a href="{{ url_for('attendance') }}"   class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+    {% endif %}
+    <a href="{{ url_for('votes') }}"        class="nav-item active"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+    <a href="{{ url_for('announcement') }}" class="nav-item"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+    <a href="{{ url_for('id_cards') }}"     class="nav-item"><span class="nav-icon">🪪</span><span class="nav-text">{% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}</span></a>
+  </nav>
+  <div class="sidebar-logout">
+    <a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+  <div class="navbar">
+    <div class="navbar-left">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <span class="navbar-title">🗳️ School Election</span>
+    </div>
+    <div class="navbar-right">
+      <div class="user-badge">👤 {{ name }} <span style="color:var(--secondary);font-size:.8rem;">({{ role|title }})</span></div>
+    </div>
+  </div>
+
+  <div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px;width:90%;"></div>
+  <div class="page-content">
+
+  <!-- ══════ HERO ══════ -->
+  <div class="{% if not election_open and winner %}hero-results{% elif election_open %}hero-open{% else %}hero-closed{% endif %}" style="border-radius:var(--radius);padding:28px 30px;color:white;margin-bottom:24px;position:relative;overflow:hidden;">
+    <div style="position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:7rem;opacity:.07;">🗳️</div>
+    {% if role == 'admin' %}
+    <!-- Admin can edit title -->
+    <div id="titleDisplay" style="margin-bottom:8px;">
+      <span class="election-title-display" onclick="editTitle()" title="Click to edit">
+        🗳️ <span id="titleText">{{ election_title }}</span> ✏️
+      </span>
+    </div>
+    <div id="titleEdit" style="display:none;margin-bottom:8px;">
+      <input class="election-title-input" id="titleInput" value="{{ election_title }}" placeholder="Election title..." onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle()">
+    </div>
+    {% else %}
+    <h2 style="font-size:1.5rem;font-weight:900;margin-bottom:8px;">🗳️ {{ election_title }}</h2>
+    {% endif %}
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      {% if election_open %}
+      <div class="live-badge"><div class="live-dot"></div>LIVE — Voting Open</div>
+      {% elif winner %}
+      <div class="live-badge" style="background:rgba(255,215,0,.25);">🏆 Results Announced</div>
+      {% else %}
+      <div class="live-badge" style="background:rgba(255,255,255,.15);">🔒 Election Closed</div>
+      {% endif %}
+      {% if total_votes > 0 %}
+      <div class="live-badge">📊 {{ total_votes }} votes cast</div>
+      {% endif %}
+      {% if candidates %}
+      <div class="live-badge">👥 {{ candidates|length }} candidates</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══════ TIMER BOX (if running) ══════ -->
+  {% if election_open and election_end_time %}
+  <div class="timer-box" id="timerBox">
+    <div style="font-size:.8rem;opacity:.8;margin-bottom:4px;">⏱️ Election closes in</div>
+    <div class="timer-digits" id="timerDigits">--:--:--</div>
+  </div>
+  {% endif %}
+
+  <!-- ══════ ADMIN CONTROLS ══════ -->
+  {% if role == 'admin' %}
+  <div class="ctrl-wrap">
+    {% if not election_open %}
+    <button class="ctrl-btn btn-start" onclick="showStartModal()">
+      <span class="icon">🔓</span><span>Start Election</span><span class="sub">Open voting for students</span>
+    </button>
+    {% else %}
+    <button class="ctrl-btn btn-end" onclick="confirmEndElection()">
+      <span class="icon">🏁</span><span>End Election</span><span class="sub">Close &amp; announce results</span>
+    </button>
+    {% endif %}
+    <button class="ctrl-btn btn-add" onclick="openModal('addCandModal')">
+      <span class="icon">➕</span><span>Add Candidate</span><span class="sub">Register a student</span>
+    </button>
+    {% if not election_open and candidates %}
+    <button class="ctrl-btn btn-reset" onclick="confirmReset()">
+      <span class="icon">🔄</span><span>New Election</span><span class="sub">Reset all votes</span>
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Admin stats row -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;">
+    <div style="background:white;border-radius:var(--radius-sm);padding:16px;text-align:center;box-shadow:var(--shadow);">
+      <div style="font-size:1.8rem;">👥</div><div style="font-size:1.5rem;font-weight:800;color:var(--primary);">{{ candidates|length }}</div><div style="font-size:.8rem;color:var(--subtext);">Candidates</div>
+    </div>
+    <div style="background:white;border-radius:var(--radius-sm);padding:16px;text-align:center;box-shadow:var(--shadow);">
+      <div style="font-size:1.8rem;">🗳️</div><div style="font-size:1.5rem;font-weight:800;color:var(--primary);">{{ total_votes }}</div><div style="font-size:.8rem;color:var(--subtext);">Total Votes</div>
+    </div>
+    <div style="background:white;border-radius:var(--radius-sm);padding:16px;text-align:center;box-shadow:var(--shadow);">
+      <div style="font-size:1.8rem;">{% if election_open %}🟢{% else %}🔴{% endif %}</div><div style="font-size:1rem;font-weight:800;color:{% if election_open %}var(--success){% else %}var(--error){% endif %};">{% if election_open %}OPEN{% else %}CLOSED{% endif %}</div><div style="font-size:.8rem;color:var(--subtext);">Status</div>
+    </div>
+  </div>
+
+  <!-- Live results during election (no exact vote counts shown to students) -->
+  {% if election_open and sorted_candidates %}
+  <div class="live-results">
+    <div class="live-title"><div class="live-dot"></div>Live Rankings (Admin View)</div>
+    {% for c in sorted_candidates %}
+    {% set vc = c.get('Votes',0)|int %}
+    <div class="rank-row" style="animation-delay:{{ loop.index0 * 0.08 }}s;">
+      <div class="rank-num {% if loop.index==1 %}rank-1{% elif loop.index==2 %}rank-2{% elif loop.index==3 %}rank-3{% else %}rank-n{% endif %}">{{ loop.index }}</div>
+      <div style="flex:0 0 110px;font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ c.get('Name','') }}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar-fill" data-width="{{ c.percentage }}" style="width:0%"></div></div>
+      <div class="rank-pct">{{ vc }} votes</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Candidates list admin manage -->
+  {% if candidates %}
+  <div class="card">
+    <div class="card-title">👥 Candidates ({{ candidates|length }}/20)</div>
+    <div>
+    {% for c in candidates %}
+    <div class="cand-admin-row">
+      <div class="cand-avatar">
+        <img src="{{ url_for('static',filename='images/students/'+c.get('Candidate_ID','')+'.jpg') }}" alt="" onerror="this.parentElement.innerHTML='👤'">
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:800;">{{ c.get('Name','') }}</div>
+        <div style="font-size:.78rem;color:var(--subtext);">{{ c.get('Candidate_ID','') }} · Class {{ c.get('Class','') }}</div>
+      </div>
+      <div style="text-align:right;margin-right:12px;">
+        <div style="font-weight:800;color:var(--primary);">{{ c.get('Votes',0) }} votes</div>
+        <div style="font-size:.75rem;color:var(--subtext);">{{ c.percentage }}%</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="action-btn btn-edit" style="padding:5px 12px;" onclick="openEditCand('{{ c.get('Candidate_ID','') }}','{{ c.get('Name','') }}','{{ c.get('Class','') }}')">✏️ Edit</button>
+        <button class="action-btn btn-danger" style="padding:5px 12px;background:linear-gradient(135deg,#c62828,#e53935);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;" onclick="delCand('{{ c.get('Candidate_ID','') }}','{{ c.get('Name','') }}')">🗑️</button>
+      </div>
+    </div>
+    {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- FINAL RESULTS (after election closed) -->
+  {% if not election_open and winner and total_votes > 0 %}
+  <div class="winner-card">
+    <div class="crown">👑</div>
+    <div style="font-size:.85rem;opacity:.8;font-weight:600;letter-spacing:.1em;">WINNER</div>
+    <div class="winner-name">{{ winner.get('Name','') }}</div>
+    <div class="winner-votes">🗳️ {{ winner.get('Votes',0) }} votes · {{ winner.percentage }}% of total</div>
+  </div>
+  <div class="podium-wrap">
+    {% for c in sorted_candidates %}
+    <div class="podium-card {% if loop.index==1 %}podium-1{% elif loop.index==2 %}podium-2{% elif loop.index==3 %}podium-3{% else %}podium-n{% endif %}">
+      <div class="podium-rank">{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}#{{ loop.index }}{% endif %}</div>
+      <div class="podium-name">{{ c.get('Name','') }}</div>
+      <div class="podium-votes">{{ c.get('Votes',0) }} votes</div>
+      <div class="podium-pct">{{ c.percentage }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ══════ STUDENT VIEW ══════ -->
+  {% else %}
+
+  {% if already_voted %}
+  <!-- Already voted — show results -->
+  <div style="background:linear-gradient(135deg,#1B5E20,#2E7D32);border-radius:16px;padding:22px 24px;color:white;margin-bottom:24px;display:flex;align-items:center;gap:16px;">
+    <div style="font-size:2.5rem;">✅</div>
+    <div>
+      <div style="font-weight:800;font-size:1.05rem;">You have already voted!</div>
+      <div style="opacity:.85;font-size:.88rem;margin-top:3px;">You voted for: <strong>{{ voted_for }}</strong> — Hal mar kaliya ayaad codeyn kartaa.</div>
+    </div>
+  </div>
+
+  {% if not election_open and total_votes > 0 %}
+  <!-- Show final results to students -->
+  {% if winner %}
+  <div class="winner-card">
+    <div class="crown">👑</div>
+    <div style="font-size:.85rem;opacity:.8;font-weight:600;letter-spacing:.1em;">WINNER</div>
+    <div class="winner-name">{{ winner.get('Name','') }}</div>
+    <div class="winner-votes">🗳️ {{ winner.get('Votes',0) }} votes · {{ winner.percentage }}%</div>
+  </div>
+  {% endif %}
+  <div class="podium-wrap">
+    {% for c in sorted_candidates %}
+    <div class="podium-card {% if loop.index==1 %}podium-1{% elif loop.index==2 %}podium-2{% elif loop.index==3 %}podium-3{% else %}podium-n{% endif %}">
+      <div class="podium-rank">{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}#{{ loop.index }}{% endif %}</div>
+      <div class="podium-name">{{ c.get('Name','') }}</div>
+      <div class="podium-votes">{{ c.get('Votes',0) }} votes · {{ c.percentage }}%</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% elif election_open %}
+  <div style="background:#e3f2fd;border-radius:12px;padding:16px;text-align:center;color:#1565c0;font-weight:700;">
+    🗳️ Doorashadu waxay socdaa — natiijadu waxay soo muuqan doontaa markay dhammaato.
+  </div>
+  {% endif %}
+
+  {% elif election_open and candidates %}
+  <!-- Voting cards -->
+  <div style="background:#e8f5e9;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+    <div style="font-size:1.5rem;">🗳️</div>
+    <div><strong style="color:#1B5E20;">Doorasho Furantahay!</strong><br><span style="font-size:.85rem;color:#2E7D32;">Hal tartame u dooro — hal cod kaliya. Doorashada ka dib ma beddeli kartid.</span></div>
+  </div>
+  <div class="cands-grid">
+    {% for c in candidates %}
+    <div class="cand-vote-card" id="card_{{ c.get('Candidate_ID','') }}">
+      <div class="cand-photo-wrap">
+        <img src="{{ url_for('static',filename='images/students/'+c.get('Candidate_ID','')+'.jpg') }}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="cand-photo-fb" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;">👤</div>
+        <div class="cand-number">{{ loop.index }}</div>
+      </div>
+      <div class="cand-body">
+        <div class="cand-name">{{ c.get('Name','') }}</div>
+        <div class="cand-class">Class {{ c.get('Class','') }} · {{ c.get('Candidate_ID','') }}</div>
+        <button class="vote-btn" onclick="startVote('{{ c.get('Candidate_ID','') }}','{{ c.get('Name','') }}')">🗳️ Vote for {{ c.get('Name','').split()[0] }}</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% elif not election_open and not already_voted %}
+  <div style="text-align:center;padding:50px 20px;">
+    <div style="font-size:4rem;margin-bottom:14px;">🔒</div>
+    <h3 style="font-weight:800;color:var(--dark);">Doorasho ma jirto hadda</h3>
+    <p style="color:var(--subtext);margin-top:8px;">Adminku marka uu bilaabo doorashada waxaad arki doontaa musharraxiinta.</p>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  </div><!-- /page-content -->
+</div><!-- /main-content -->
+
+<!-- ══════ START ELECTION MODAL ══════ -->
+{% if role == 'admin' %}
+<div class="modal-overlay" id="startModal" style="display:none;">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">🔓 Start Election</div>
+
+    {% if candidates|length < 2 %}
+    <div class="alert alert-error" style="margin-bottom:16px;">
+      ❌ Ugu yaraan 2 tartame ayaa loo baahan yahay! Hadda waxaa jira {{ candidates|length }} tartame. Ku dar tartamayaal ka hor intaadan bilaaban.
+    </div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn btn-danger" onclick="closeModal('startModal')">✖ Close</button>
+    </div>
+    {% else %}
+
+    <div style="background:#e8f5e9;border-radius:10px;padding:14px;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:.85rem;color:#2e7d32;margin-bottom:6px;">✅ {{ candidates|length }} tartamayaal diyaar u ah doorashada</div>
+    </div>
+
+    <div class="form-group">
+      <label style="font-weight:700;">Election Title</label>
+      <input type="text" class="form-control" id="startTitle" value="{{ election_title }}" placeholder="e.g. Student Council Election 2026">
+    </div>
+
+    <div class="form-group">
+      <label style="font-weight:700;">Duration — Doorashada Muddo</label>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;background:#f5f5f5;border-radius:10px;padding:10px 14px;font-weight:600;font-size:.85rem;">
+          <input type="radio" name="durType" value="manual" checked onchange="toggleDur()"> ⚙️ Manual Control
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;background:#f5f5f5;border-radius:10px;padding:10px 14px;font-weight:600;font-size:.85rem;">
+          <input type="radio" name="durType" value="timer" onchange="toggleDur()"> ⏱️ Set Timer
+        </label>
+      </div>
+    </div>
+
+    <div id="timerInputs" style="display:none;">
+      <label style="font-weight:700;font-size:.85rem;">Duration (min 10 minutes, max 10 days)</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+        <div>
+          <div style="font-size:.75rem;color:var(--subtext);text-align:center;margin-bottom:4px;">Days</div>
+          <input type="number" class="form-control" id="tDays" min="0" max="10" value="0" placeholder="0" style="text-align:center;">
+        </div>
+        <div>
+          <div style="font-size:.75rem;color:var(--subtext);text-align:center;margin-bottom:4px;">Hours</div>
+          <input type="number" class="form-control" id="tHours" min="0" max="23" value="0" placeholder="0" style="text-align:center;">
+        </div>
+        <div>
+          <div style="font-size:.75rem;color:var(--subtext);text-align:center;margin-bottom:4px;">Minutes</div>
+          <input type="number" class="form-control" id="tMins" min="0" max="59" value="10" placeholder="10" style="text-align:center;">
+        </div>
+      </div>
+      <div style="font-size:.75rem;color:var(--subtext);margin-top:6px;">⚠️ Minimum 10 minutes</div>
+    </div>
+
+    <div id="startResult" style="margin-top:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-danger" onclick="closeModal('startModal')">✖ Cancel</button>
+      <button class="btn btn-success" id="startBtn" onclick="doStartElection()">🔓 Start Election</button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ══════ ADD CANDIDATE MODAL ══════ -->
+<div class="modal-overlay" id="addCandModal" style="display:none;">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title">➕ Add Candidate</div>
+    <div class="form-group">
+      <label style="font-weight:700;">Student ID <span style="color:var(--error);">*</span></label>
+      <input type="text" class="form-control" id="cId" placeholder="e.g. CS401" oninput="autoFillStudent(this.value)" style="text-transform:uppercase;">
+    </div>
+    <div class="cand-preview" id="candPreview">
+      <div class="found-tag">✅ Student Found</div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div class="cand-avatar" id="prevAvatar" style="width:50px;height:50px;"></div>
+        <div>
+          <div style="font-weight:800;" id="prevName"></div>
+          <div style="font-size:.8rem;color:var(--subtext);" id="prevClass"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label style="font-weight:700;">Full Name <span style="color:var(--error);">*</span></label>
+        <input type="text" class="form-control" id="cName" placeholder="Auto-filled from ID">
+      </div>
+      <div class="form-group">
+        <label style="font-weight:700;">Class</label>
+        <select class="form-control" id="cClass">
+          <option value="1">Class 1</option><option value="2">Class 2</option>
+          <option value="3">Class 3</option><option value="4" selected>Class 4</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="font-weight:700;">Photo (Optional)</label>
+      <input type="file" class="form-control" id="cPhoto" accept="image/*">
+    </div>
+    <div id="addCandResult" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-danger" onclick="closeModal('addCandModal')">✖ Cancel</button>
+      <button class="btn btn-success" id="addCandBtn" onclick="addCand()">➕ Add Candidate</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ EDIT CANDIDATE MODAL ══════ -->
+<div class="modal-overlay" id="editCandModal" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">✏️ Edit Candidate</div>
+    <input type="hidden" id="eCandId">
+    <div class="form-row">
+      <div class="form-group"><label style="font-weight:700;">Full Name</label><input type="text" class="form-control" id="eCandName"></div>
+      <div class="form-group"><label style="font-weight:700;">Class</label>
+        <select class="form-control" id="eCandClass">
+          <option value="1">Class 1</option><option value="2">Class 2</option>
+          <option value="3">Class 3</option><option value="4">Class 4</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label style="font-weight:700;">Photo (Optional)</label><input type="file" class="form-control" id="eCandPhoto" accept="image/*"></div>
+    <div id="editCandResult" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-danger" onclick="closeModal('editCandModal')">✖ Cancel</button>
+      <button class="btn btn-success" onclick="updateCand()">💾 Save</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══════ VOTE CONFIRMATION OVERLAY ══════ -->
+{% if role == 'student' %}
+<div class="confirm-overlay" id="voteStep1" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗳️</div>
+    <div class="confirm-title">Confirm Your Vote</div>
+    <div class="confirm-sub">Waxaad u codeynaysaa: <strong id="vName" style="color:var(--primary);"></strong><br><span style="color:var(--error);font-size:.85rem;font-weight:700;">⚠️ Hal mar kaliya — ka dib ma beddeli kartid!</span></div>
+    <div class="confirm-btns">
+      <button class="cbtn cbtn-no" onclick="cancelVote()">✖ Cancel</button>
+      <button class="cbtn cbtn-yes" onclick="showStep2()">Haa, Fur →</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="voteStep2" style="display:none;">
+  <div class="confirm-box">
+    <div class="confirm-icon">🔒</div>
+    <div class="confirm-title">Xaqiiji Codkaaga</div>
+    <div class="confirm-sub"><strong id="confName" style="color:var(--primary);font-size:1.1rem;"></strong><br><br>
+    Haddaad taabato "Codeey!" codkaagii <strong style="color:var(--error);">waa la xidayaa oo ma beddeli kartid.</strong><br>
+    Ma hubtaa?</div>
+    <div class="confirm-btns">
+      <button class="cbtn cbtn-no" onclick="cancelVote()">← Dib u noqo</button>
+      <button class="cbtn cbtn-yes" id="voteBtn" onclick="doVote()" style="background:linear-gradient(135deg,#2E7D32,#43A047);">✅ Codeey!</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+/* ── SIDEBAR ── */
+function toggleSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay'),m=window.innerWidth<=768;if(m){s.classList.toggle('mobile-open');if(o)o.classList.toggle('active');}else{s.classList.toggle('collapsed');var c=document.getElementById('mainContent');if(c)c.classList.toggle('expanded');}}
+function closeSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay');if(s)s.classList.remove('mobile-open');if(o)o.classList.remove('active');}
+function openModal(id){var el=document.getElementById(id);if(el){el.style.display='flex';document.body.style.overflow='hidden';}}
+function closeModal(id){var el=document.getElementById(id);if(el){el.style.display='none';document.body.style.overflow='';}}
+function showAlert(msg,type){var c=document.getElementById('alertContainer');if(!c)return;var el=document.createElement('div');el.className='alert alert-'+(type||'success');el.innerHTML=(type==='error'?'❌':'✅')+' '+msg;c.appendChild(el);setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove();},300);},4000);}
+document.querySelectorAll('.modal-overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o){closeModal(o.id);}});});
+
+/* ── PROGRESS BARS ── */
+document.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    document.querySelectorAll('[data-width]').forEach(function(b){b.style.width=(b.dataset.width||0)+'%';});
+  },400);
+  {% if election_open and election_end_time %}
+  startCountdown('{{ election_end_time }}');
+  {% endif %}
+});
+
+/* ── CONFETTI ── */
+function confetti(){var clrs=['#FFD700','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#FF9FF3'];for(var i=0;i<80;i++){(function(){var p=document.createElement('div');p.style.cssText='position:fixed;width:10px;height:10px;top:-20px;left:'+Math.random()*100+'vw;background:'+clrs[Math.floor(Math.random()*clrs.length)]+';border-radius:'+(Math.random()>.5?'50%':'2px')+';z-index:9999;pointer-events:none;animation:confettiFall '+(2+Math.random()*3)+'s linear '+(Math.random()*1.5)+'s forwards;';document.body.appendChild(p);setTimeout(function(){p.remove();},6000);})();}}
+
+/* ── COUNTDOWN TIMER ── */
+function startCountdown(endTimeStr){
+  function pad(n){return String(n).padStart(2,'0');}
+  function tick(){
+    var now=new Date();var end=new Date(endTimeStr);var diff=Math.floor((end-now)/1000);
+    var el=document.getElementById('timerDigits');
+    if(!el)return;
+    if(diff<=0){
+      el.textContent='00:00:00';
+      // Auto-close
+      fetch('/toggle_election',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'closed'})}).then(function(){setTimeout(function(){location.reload();},1000);});
+      return;
+    }
+    var d=Math.floor(diff/86400);var h=Math.floor((diff%86400)/3600);var m=Math.floor((diff%3600)/60);var s=diff%60;
+    el.textContent=(d>0?d+'d ':'')+pad(h)+':'+pad(m)+':'+pad(s);
+    if(diff<=60)el.style.color='#ff5252';
+    setTimeout(tick,1000);
+  }
+  tick();
+}
+
+/* ── TITLE EDIT (admin) ── */
+var savedTitle='{{ election_title }}';
+function editTitle(){document.getElementById('titleDisplay').style.display='none';var inp=document.getElementById('titleInput');document.getElementById('titleEdit').style.display='block';inp.focus();inp.select();}
+function saveTitle(){
+  var val=document.getElementById('titleInput').value.trim();
+  if(!val){document.getElementById('titleInput').value=savedTitle;closeTitle();return;}
+  savedTitle=val;
+  document.getElementById('titleText').textContent=val;
+  closeTitle();
+}
+function closeTitle(){document.getElementById('titleEdit').style.display='none';document.getElementById('titleDisplay').style.display='block';}
+
+/* ── START ELECTION ── */
+function showStartModal(){openModal('startModal');}
+function toggleDur(){
+  var isTimer=document.querySelector('input[name="durType"]:checked').value==='timer';
+  document.getElementById('timerInputs').style.display=isTimer?'block':'none';
+}
+function doStartElection(){
+  var title=document.getElementById('startTitle').value.trim()||savedTitle;
+  var isTimer=document.querySelector('input[name="durType"]') && document.querySelector('input[name="durType"]:checked').value==='timer';
+  var secs=0;
+  if(isTimer){
+    var d=parseInt(document.getElementById('tDays').value)||0;
+    var h=parseInt(document.getElementById('tHours').value)||0;
+    var m=parseInt(document.getElementById('tMins').value)||0;
+    secs=(d*86400)+(h*3600)+(m*60);
+    if(secs < 600){document.getElementById('startResult').innerHTML='<div class="alert alert-error">❌ Minimum 10 minutes required!</div>';return;}
+    if(secs > 864000){document.getElementById('startResult').innerHTML='<div class="alert alert-error">❌ Maximum 10 days!</div>';return;}
+  }
+  var btn=document.getElementById('startBtn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  fetch('/toggle_election',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status:'open',title:title,timer_seconds:secs})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    btn.innerHTML='🔓 Start Election';btn.disabled=false;
+    if(d.success){
+      confetti();
+      showAlert('✅ Election started!','success');
+      closeModal('startModal');
+      setTimeout(function(){location.reload();},1200);
+    } else {
+      document.getElementById('startResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';
+    }
+  }).catch(function(){btn.innerHTML='🔓 Start Election';btn.disabled=false;document.getElementById('startResult').innerHTML='<div class="alert alert-error">❌ Connection error!</div>';});
+}
+
+/* ── END ELECTION ── */
+function confirmEndElection(){
+  var el=document.createElement('div');
+  el.className='confirm-overlay';el.id='endConfirm';
+  el.innerHTML='<div class="confirm-box"><div class="confirm-icon">🏁</div><div class="confirm-title">End the Election?</div><div class="confirm-sub">Natiijadu waxay soo muuqan doontaa dhammaan ardeyda.<br><strong style="color:var(--error);">Tan la xidaa ka dib waa la arkaa guuleystaha.</strong></div><div class="confirm-btns"><button class="cbtn cbtn-no" onclick="document.getElementById(\'endConfirm\').remove()">✖ Cancel</button><button class="cbtn cbtn-yes" style="background:linear-gradient(135deg,#c62828,#e53935);" onclick="doEndElection()">🏁 End Now</button></div></div>';
+  document.body.appendChild(el);document.body.style.overflow='hidden';
+}
+function doEndElection(){
+  var el=document.getElementById('endConfirm');if(el)el.remove();document.body.style.overflow='';
+  fetch('/toggle_election',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'closed'})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.success){confetti();showAlert('🏆 Election ended! Results are live.','success');setTimeout(function(){location.reload();},2000);}else{showAlert('❌ '+d.message,'error');}});
+}
+
+/* ── RESET ── */
+function confirmReset(){
+  var el=document.createElement('div');
+  el.className='confirm-overlay';el.id='resetConfirm';
+  el.innerHTML='<div class="confirm-box"><div class="confirm-icon">🔄</div><div class="confirm-title">Reset Election?</div><div class="confirm-sub">Dhammaan codadkii waa la tiri doonaa!<br>Tartamayaasha codkooda waa eber noqon doona.<br><strong style="color:var(--error);">Tani waa ficil aan la beddelayni!</strong></div><div class="confirm-btns"><button class="cbtn cbtn-no" onclick="document.getElementById(\'resetConfirm\').remove()">✖ Cancel</button><button class="cbtn cbtn-yes" style="background:linear-gradient(135deg,#e65100,#ff6d00);" onclick="doReset()">🔄 Reset All</button></div></div>';
+  document.body.appendChild(el);document.body.style.overflow='hidden';
+}
+function doReset(){
+  var el=document.getElementById('resetConfirm');if(el)el.remove();document.body.style.overflow='';
+  fetch('/reset_election',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.success){showAlert('✅ Election reset!','success');setTimeout(function(){location.reload();},1200);}else{showAlert('❌ '+d.message,'error');}});
+}
+
+/* ── AUTO-FILL CANDIDATE ── */
+var autoTimer=null;
+function autoFillStudent(val){
+  val=val.trim().toUpperCase();
+  clearTimeout(autoTimer);
+  if(val.length<3){document.getElementById('candPreview').classList.remove('show');return;}
+  autoTimer=setTimeout(function(){
+    fetch('/get_student_info?id='+encodeURIComponent(val))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var prev=document.getElementById('candPreview');
+      if(d.found){
+        document.getElementById('cName').value=d.name;
+        document.getElementById('cClass').value=d['class']||'4';
+        document.getElementById('prevName').textContent=d.name;
+        document.getElementById('prevClass').textContent='Class '+d['class'];
+        document.getElementById('prevAvatar').innerHTML='<img src="/static/images/students/'+val+'.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.parentElement.innerHTML=\'👤\'">';
+        prev.classList.add('show');
+      } else {
+        prev.classList.remove('show');
+        if(val.length>=4) document.getElementById('addCandResult').innerHTML='<div class="alert alert-error">❌ '+(d.message||val+' not found')+'</div>';
+      }
+    });
+  },400);
+}
+
+/* ── ADD CANDIDATE ── */
+function addCand(){
+  var id=document.getElementById('cId').value.trim().toUpperCase();
+  var name=document.getElementById('cName').value.trim();
+  var cls=document.getElementById('cClass').value;
+  var photo=document.getElementById('cPhoto').files[0];
+  var res=document.getElementById('addCandResult');
+  if(!id||!name){res.innerHTML='<div class="alert alert-error">❌ ID and Name required!</div>';return;}
+  var btn=document.getElementById('addCandBtn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  var fd=new FormData();fd.append('candidate_id',id);fd.append('name',name);fd.append('class',cls);if(photo)fd.append('photo',photo);
+  fetch('/add_candidate',{method:'POST',body:fd})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    btn.innerHTML='➕ Add Candidate';btn.disabled=false;
+    if(d.success){res.innerHTML='<div class="alert alert-success">✅ '+d.message+'</div>';setTimeout(function(){closeModal('addCandModal');location.reload();},1400);}
+    else{res.innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}
+  }).catch(function(){btn.innerHTML='➕ Add Candidate';btn.disabled=false;res.innerHTML='<div class="alert alert-error">❌ Connection error!</div>';});
+}
+
+/* ── EDIT/DELETE CANDIDATE ── */
+function openEditCand(id,name,cls){document.getElementById('eCandId').value=id;document.getElementById('eCandName').value=name;document.getElementById('eCandClass').value=cls;document.getElementById('editCandResult').innerHTML='';openModal('editCandModal');}
+function updateCand(){
+  var id=document.getElementById('eCandId').value;var name=document.getElementById('eCandName').value.trim();var cls=document.getElementById('eCandClass').value;var photo=document.getElementById('eCandPhoto').files[0];
+  var fd=new FormData();fd.append('candidate_id',id);fd.append('name',name);fd.append('class',cls);if(photo)fd.append('photo',photo);
+  fetch('/update_candidate',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){if(d.success){document.getElementById('editCandResult').innerHTML='<div class="alert alert-success">✅ Updated!</div>';setTimeout(function(){closeModal('editCandModal');location.reload();},1400);}else{document.getElementById('editCandResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}});
+}
+function delCand(id,name){
+  var el=document.createElement('div');el.className='confirm-overlay';el.id='delConfirm';
+  el.innerHTML='<div class="confirm-box"><div class="confirm-icon">🗑️</div><div class="confirm-title">Delete Candidate?</div><div class="confirm-sub"><strong>'+name+'</strong> waa la tiriyaa!</div><div class="confirm-btns"><button class="cbtn cbtn-no" onclick="document.getElementById(\'delConfirm\').remove()">✖ Cancel</button><button class="cbtn cbtn-yes" style="background:linear-gradient(135deg,#c62828,#e53935);" onclick="doDel(\''+id+'\')">🗑️ Delete</button></div></div>';
+  document.body.appendChild(el);
+}
+function doDel(id){
+  var el=document.getElementById('delConfirm');if(el)el.remove();
+  fetch('/delete_candidate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id:id})})
+  .then(function(r){return r.json();}).then(function(d){if(d.success){showAlert('✅ Deleted!','success');setTimeout(function(){location.reload();},1000);}else{showAlert('❌ '+d.message,'error');}});
+}
+
+/* ── STUDENT VOTING ── */
+var pCandId='',pCandName='',voting=false;
+function startVote(id,name){if(voting)return;pCandId=id;pCandName=name;document.getElementById('vName').textContent=name;document.getElementById('voteStep1').style.display='flex';document.body.style.overflow='hidden';}
+function showStep2(){document.getElementById('voteStep1').style.display='none';document.getElementById('confName').textContent=pCandName;document.getElementById('voteStep2').style.display='flex';}
+function cancelVote(){document.getElementById('voteStep1').style.display='none';document.getElementById('voteStep2').style.display='none';document.body.style.overflow='';pCandId='';pCandName='';}
+function doVote(){
+  if(voting||!pCandId)return;
+  voting=true;
+  var btn=document.getElementById('voteBtn');btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Codeynaya...';btn.disabled=true;
+  fetch('/submit_vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_id:pCandId})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    document.getElementById('voteStep2').style.display='none';document.body.style.overflow='';
+    if(d.success){
+      confetti();
+      // Disable all vote buttons
+      document.querySelectorAll('.vote-btn').forEach(function(b){b.disabled=true;b.style.background='#e0e0e0';b.style.color='#9e9e9e';b.textContent='🗳️ Already Voted';});
+      showAlert('✅ Codkaagii waa la xareeye! 🎉','success');
+      setTimeout(function(){location.reload();},2000);
+    } else {
+      btn.innerHTML='✅ Codeey!';btn.disabled=false;voting=false;
+      showAlert('❌ '+d.message,'error');
+    }
+  }).catch(function(){document.getElementById('voteStep2').style.display='none';document.body.style.overflow='';showAlert('❌ Connection error!','error');voting=false;});
+}
+</script>
+</body>
+</html>
