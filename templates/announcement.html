@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Announcement - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static',filename='images/logo.png') }}">
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+</head>
+<body class="dashboard-body">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<img src="{{ url_for('static',filename='images/logo.png') }}" alt="Logo" class="sidebar-logo">
+<span class="sidebar-title">School System</span>
+</div>
+<nav class="sidebar-nav">
+<a href="{{ url_for('dashboard') }}" class="nav-item"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+<a href="{{ url_for('grades') }}" class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+<a href="{{ url_for('fees') }}" class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+<a href="{{ url_for('monthly_fees') }}" class="nav-item"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+{% if role in ['admin','attendance'] %}
+<a href="{{ url_for('attendance') }}" class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+{% endif %}
+<a href="{{ url_for('votes') }}" class="nav-item"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+<a href="{{ url_for('announcement') }}" class="nav-item active"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+<a href="{{ url_for('id_cards') }}" class="nav-item">
+  <span class="nav-icon">🪪</span>
+  <span class="nav-text">
+    {% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}
+  </span>
+</a>
+</nav>
+<div class="sidebar-logout">
+<a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+</div>
+</div>
+<div class="main-content" id="mainContent">
+<div class="navbar">
+<div class="navbar-left">
+<button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+<span class="navbar-title">📢 Announcement</span>
+</div>
+<div class="navbar-right">
+<div class="user-badge">👤 {{ name }} <span style="color:var(--secondary);font-size:.8rem;">({{ role|title }})</span></div>
+</div>
+</div>
+<div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:350px;width:90%;"></div>
+<div class="page-content">
+<div class="welcome-card"><h2>📢 Announcements</h2><p>School notices and important updates</p></div>
+{% if role == 'admin' %}
+<div class="card">
+<div class="card-title">✏️ Write Announcement</div>
+<textarea class="announcement-box" id="annText" placeholder="Write your announcement here..." rows="10">{{ announcement }}</textarea>
+<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:15px;">
+<button class="btn btn-danger" onclick="clearAnn()">🗑️ Clear</button>
+<button class="btn btn-success" onclick="saveAnn()">💾 Save</button>
+</div>
+<div id="annResult" style="margin-top:15px;"></div>
+</div>
+{% if announcement %}
+<div class="card">
+<div class="card-title">👁️ Preview</div>
+<div style="background:var(--background);border-radius:var(--radius-sm);padding:20px;border-left:4px solid var(--primary);white-space:pre-line;line-height:1.8;color:var(--text);">{{ announcement }}</div>
+</div>
+{% endif %}
+{% else %}
+{% if announcement %}
+<div class="card">
+<div class="card-title">📢 Latest Announcement</div>
+<div style="background:linear-gradient(135deg,#e3f2fd,#e8f5e9);border-radius:var(--radius-sm);padding:25px;border-left:4px solid var(--primary);white-space:pre-line;line-height:1.9;color:var(--text);position:relative;">
+<div style="position:absolute;top:15px;right:15px;font-size:2rem;opacity:.2;">📢</div>
+{{ announcement }}
+</div>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:60px;">
+<div style="font-size:4rem;margin-bottom:15px;">📢</div>
+<h3 style="color:var(--dark);margin-bottom:10px;">No Announcements Yet</h3>
+<p style="color:var(--subtext);">Please check back later.</p>
+</div>
+{% endif %}
+{% endif %}
+</div>
+</div>
+<script>
+function toggleSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay'),m=window.innerWidth<=768;if(m){s.classList.toggle('mobile-open');if(o)o.classList.toggle('active');}else{s.classList.toggle('collapsed');var c=document.getElementById('mainContent');if(c)c.classList.toggle('expanded');}}
+function closeSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay');if(s)s.classList.remove('mobile-open');if(o)o.classList.remove('active');}
+function showAlert(msg,type){type=type||'success';var c=document.getElementById('alertContainer');if(!c)return;var el=document.createElement('div');el.className='alert alert-'+type;el.innerHTML=(type==='success'?'✅':'❌')+' '+msg;c.appendChild(el);setTimeout(function(){el.style.opacity='0';el.style.transition='opacity 0.3s';setTimeout(function(){el.remove();},300);},3500);}
+function saveAnn(){
+var text=document.getElementById('annText').value.trim();
+if(!text){document.getElementById('annResult').innerHTML='<div class="alert alert-error">❌ Write something first!</div>';return;}
+var btn=event.target;btn.innerHTML='<span class="spinner"></span> Saving...';btn.disabled=true;
+fetch('/save_announcement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text})})
+.then(function(r){return r.json();}).then(function(d){btn.innerHTML='💾 Save';btn.disabled=false;if(d.success){document.getElementById('annResult').innerHTML='<div class="alert alert-success">✅ Saved!</div>';setTimeout(function(){location.reload();},1500);}else{document.getElementById('annResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}});
+}
+function clearAnn(){
+if(!confirm('Clear announcement?'))return;
+document.getElementById('annText').value='';
+fetch('/save_announcement',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:''})})
+.then(function(r){return r.json();}).then(function(d){if(d.success){showAlert('✅ Cleared!','success');setTimeout(function(){location.reload();},1000);}});
+}
+</script>
+</body>
+</html>

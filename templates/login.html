@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>School Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1565C0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="School System">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/logo.png') }}">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW error:', err));
+            });
+        }
+    </script>
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+</head>
+<body class="login-body">
+
+    <div class="login-card">
+
+        <div class="login-logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="School Logo"
+                 style="width:90px; height:90px; object-fit:cover; border-radius:50%;"
+                 onerror="this.style.display='none'">
+        </div>
+
+        <h1 class="login-title">SCHOOL MANAGEMENT</h1>
+        <p class="login-subtitle">System — 2026</p>
+
+        <div class="role-buttons">
+            <button class="role-btn active" data-role="staff" onclick="selectRole(this)">
+                👨‍💼 Staff
+            </button>
+            <button class="role-btn" data-role="student" onclick="selectRole(this)">
+                👨‍🎓 Student
+            </button>
+        </div>
+
+        {% if error %}
+        <div class="error-msg" id="flaskAlert">
+            ❌ {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="error-msg" id="jsAlertContainer" style="display: none;"></div>
+
+        <form method="POST" action="/login" id="loginForm">
+            <input type="hidden" name="role" id="roleInput" value="staff">
+
+            <div class="input-group">
+                <label>👤 Username / ID</label>
+                <input type="text" name="username" id="username"
+                       placeholder="Enter username" required
+                       autocomplete="off" autocorrect="off"
+                       autocapitalize="none" spellcheck="false">
+            </div>
+
+            <div class="input-group">
+                <label>🔒 Password</label>
+                <input type="password" name="password" id="password"
+                       placeholder="Enter password" required
+                       autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                LOGIN
+            </button>
+        </form>
+
+        <p class="copyright">© 2026 Created By Abdifatah Said</p>
+
+    </div>
+
+    <script>
+        const flaskAlert = document.getElementById('flaskAlert');
+        const jsAlertContainer = document.getElementById('jsAlertContainer');
+
+        function selectRole(btn) {
+            document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('roleInput').value = btn.dataset.role;
+            
+            // Markii la baddalo role-ka, qari error-adii hore ee muuqday si aysan u dhex fariisan
+            if (flaskAlert) flaskAlert.style.display = 'none';
+            jsAlertContainer.style.display = 'none';
+
+            const username = document.getElementById('username');
+            if (btn.dataset.role === 'student') {
+                username.placeholder = 'Enter your Student ID (e.g. CS401)';
+            } else {
+                username.placeholder = 'Enter username';
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const btn      = document.getElementById('loginBtn');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.strip ? document.getElementById('password').value.strip() : document.getElementById('password').value.trim();
+            
+            // Qari error-kii hore ee Flask mar walba oo badanka la riixo
+            if (flaskAlert) flaskAlert.style.display = 'none';
+
+            if (!username || !password) {
+                e.preventDefault();
+                jsAlertContainer.innerHTML = '⚠️ Please fill all required fields!';
+                jsAlertContainer.style.display = 'block';
+                return;
+            }
+
+            // Haddii wax walba sax yihiin, badanku wuxuu isku baddalayaa loading spinner nadiif ah
+            jsAlertContainer.style.display = 'none';
+            btn.innerHTML = '<span class="spinner"></span> Logging in...';
+            btn.disabled  = true;
+        });
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installDiv = document.createElement('div');
+            installDiv.style.cssText = 'text-align:center; margin-top:15px;';
+            installDiv.innerHTML = `
+                <button onclick="installPWA()"
+                        style="background:linear-gradient(135deg,#1565C0,#00796B);
+                               color:white; border:none; padding:10px 24px;
+                               border-radius:20px; font-size:0.85rem;
+                               font-weight:600; cursor:pointer;">
+                    📱 Add to Home Screen
+                </button>`;
+            const card = document.querySelector('.login-card');
+            if (card) card.appendChild(installDiv);
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+            }
+        }
+    </script>
+
+</body>
+</html>
