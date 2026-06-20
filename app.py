@@ -1,6 +1,6 @@
 # ═══════════════════════════════════
-#   SCHOOL MANAGEMENT SYSTEM
-#   Created By Abdifatah Said
+#  SCHOOL MANAGEMENT SYSTEM
+#  Created By Abdifatah Said
 # ═══════════════════════════════════
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_from_directory
