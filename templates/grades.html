@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Examinations - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static',filename='images/logo.png') }}">
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+<style>
+@keyframes slideUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes barIn{from{width:0}to{width:var(--w)}}
+@keyframes pop{0%{transform:scale(0.5);opacity:0;}75%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
+@keyframes shimmer{0%{background-position:-200% center;}100%{background-position:200% center;}}
+@keyframes glow{0%,100%{box-shadow:0 0 12px rgba(21,101,192,.3);}50%{box-shadow:0 0 24px rgba(21,101,192,.6);}}
+@keyframes countUp{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+
+/* ══ GRADE PILLS ══ */
+.gp{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
+  border-radius:50%;font-weight:900;font-size:.88rem;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);animation:pop .4s cubic-bezier(.34,1.56,.64,1) both;}
+.gA{background:linear-gradient(145deg,#1b5e20,#43a047);color:#fff;box-shadow:0 4px 16px rgba(67,160,71,.45);}
+.gB{background:linear-gradient(145deg,#0d47a1,#1976d2);color:#fff;box-shadow:0 4px 16px rgba(25,118,210,.45);}
+.gC{background:linear-gradient(145deg,#00695c,#00897b);color:#fff;box-shadow:0 4px 16px rgba(0,137,123,.45);}
+.gD{background:linear-gradient(145deg,#e65100,#fb8c00);color:#fff;box-shadow:0 4px 16px rgba(251,140,0,.4);}
+.gF{background:linear-gradient(145deg,#b71c1c,#e53935);color:#fff;box-shadow:0 4px 16px rgba(229,57,53,.4);}
+
+/* ══ SCORE BAR ══ */
+.sbar{height:4px;background:rgba(0,0,0,.07);border-radius:4px;margin-top:5px;overflow:hidden;}
+.sbar-fill{height:100%;border-radius:4px;animation:barIn .9s ease both;}
+
+/* ══ TERM TABS ══ */
+.ttab{padding:9px 20px;border-radius:24px;border:2px solid #e8eaf6;background:white;
+  font-weight:800;font-size:.8rem;cursor:pointer;transition:all .25s;color:#78909c;letter-spacing:.3px;}
+.ttab:hover{border-color:#90caf9;color:#1565c0;transform:translateY(-1px);}
+.ttab.active{background:linear-gradient(135deg,#1a237e,#1565c0);color:white;
+  border-color:transparent;box-shadow:0 5px 18px rgba(21,101,192,.35);transform:translateY(-1px);}
+
+/* ══ HERO CARD ══ */
+.hero-card{
+  background:linear-gradient(145deg,#0a1628 0%,#0d47a1 45%,#00695c 100%);
+  border-radius:22px;padding:26px 24px;color:white;margin-bottom:20px;
+  position:relative;overflow:hidden;
+  box-shadow:0 10px 40px rgba(13,71,161,.4);
+  text-align:center;
+}
+.hero-card::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:220px;height:220px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.1),transparent 70%);
+}
+.hero-card::after{
+  content:'';position:absolute;bottom:-40px;left:30%;
+  width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,105,92,.4),transparent 70%);
+}
+.hero-avatar{
+  width:56px;height:56px;border-radius:50%;
+  background:rgba(255,255,255,.15);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;flex-shrink:0;
+  border:2px solid rgba(255,255,255,.25);
+  box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+
+/* ══ GRADE SCALE BAR ══ */
+.scale-bar{
+  display:flex;gap:8px;flex-wrap:wrap;
+  justify-content:center;align-items:center;
+  background:white;border-radius:16px;padding:14px 16px;
+  margin-bottom:18px;box-shadow:0 2px 12px rgba(0,0,0,.07);
+  border:1px solid #f0f4ff;text-align:center;
+}
+.scale-item{display:flex;align-items:center;gap:6px;font-size:.76rem;font-weight:700;}
+.scale-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.scale-a{background:#43a047;}.scale-b{background:#1976d2;}.scale-c{background:#00897b;}
+.scale-d{background:#fb8c00;}.scale-f{background:#e53935;}
+
+/* ══ MOBILE CARD VIEW — Student per-subject cards ══ */
+.subj-card{
+  background:white;border-radius:18px;margin-bottom:12px;overflow:hidden;
+  box-shadow:0 3px 16px rgba(0,0,0,.08);
+  border:1px solid #f0f4ff;
+  animation:slideUp .35s ease both;
+  transition:transform .2s,box-shadow .2s;
+}
+.subj-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.12);}
+.subj-card-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 10px;border-bottom:1px solid #f5f7ff;
+}
+.subj-name{font-weight:800;font-size:.95rem;color:#1a237e;}
+.subj-body{padding:12px 16px 14px;}
+.subj-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
+.stat-box{
+  background:#f8f9ff;border-radius:12px;padding:10px 8px;text-align:center;
+  border:1px solid #e8eaf6;
+}
+.stat-val{font-size:1.1rem;font-weight:900;line-height:1;}
+.stat-lbl{font-size:.64rem;color:#78909c;font-weight:600;margin-top:3px;letter-spacing:.3px;text-transform:uppercase;}
+.total-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#f8f9ff,#e8f4fd);
+  border-radius:12px;padding:11px 14px;
+  border:1px solid #e3eeff;
+}
+.total-label{font-size:.76rem;font-weight:700;color:#546e7a;letter-spacing:.4px;text-transform:uppercase;}
+.total-val{font-size:1.3rem;font-weight:900;}
+
+/* ══ TOTAL COLORS ══ */
+.tc-A{color:#1b5e20;}.tc-B{color:#0d47a1;}.tc-C{color:#00695c;}.tc-D{color:#e65100;}.tc-F{color:#b71c1c;}
+
+/* ══ STATUS CHIPS ══ */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:16px;font-size:.76rem;font-weight:800;letter-spacing:.3px;}
+.chip-pass{background:#e8f5e9;color:#1b5e20;border:1.5px solid #a5d6a7;}
+.chip-fail{background:#ffebee;color:#b71c1c;border:1.5px solid #ef9a9a;}
+.chip-pend{background:#f5f5f5;color:#757575;border:1.5px solid #e0e0e0;}
+
+/* ══ FINAL RESULTS CARD ══ */
+.final-score-ring{
+  width:120px;height:120px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  margin:0 auto 18px;
+  position:relative;
+  animation:countUp .6s ease both;
+}
+.final-score-ring::before{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  border:6px solid rgba(255,255,255,.2);
+}
+
+/* ══ ADMIN TABLE — inline edit ══ */
+.etbl{width:100%;border-collapse:collapse;}
+.etbl th{
+  background:linear-gradient(135deg,#1a237e,#1565c0);color:white;
+  padding:12px 14px;text-align:left;font-size:.74rem;font-weight:700;
+  white-space:nowrap;letter-spacing:.4px;
+}
+.etbl th:first-child{border-radius:0;}
+.etbl td{padding:10px 14px;border-bottom:1px solid #f0f4ff;vertical-align:middle;font-size:.84rem;}
+.etbl tr:last-child td{border-bottom:none;}
+.etbl tr:hover td{background:#f5f7ff;}
+
+/* ══ TOTAL BADGE ══ */
+.total-badge{display:inline-block;padding:4px 13px;border-radius:14px;font-weight:900;font-size:.85rem;}
+.tb-A{background:#e8f5e9;color:#1b5e20;border:1.5px solid #c8e6c9;}
+.tb-B{background:#e3f2fd;color:#0d47a1;border:1.5px solid #bbdefb;}
+.tb-C{background:#e0f2f1;color:#00695c;border:1.5px solid #b2dfdb;}
+.tb-D{background:#fff3e0;color:#e65100;border:1.5px solid #ffe0b2;}
+.tb-F{background:#ffebee;color:#b71c1c;border:1.5px solid #ffcdd2;}
+
+/* ══ EDIT CELL ══ */
+.ecell{cursor:pointer;transition:background .15s;border-radius:8px;padding:5px 8px;position:relative;}
+.ecell:hover{background:#e3f2fd;}
+.ecell::after{content:'✎';position:absolute;top:-2px;right:-2px;font-size:.55rem;color:#90caf9;opacity:0;transition:opacity .15s;}
+.ecell:hover::after{opacity:1;}
+.ecell.editing{background:#fff8e1;border:1.5px dashed #f57f17;}
+.einput{width:58px;padding:5px 8px;border:2.5px solid #1565c0;border-radius:8px;
+  font-size:.88rem;font-weight:800;text-align:center;outline:none;background:white;}
+.esave{padding:5px 12px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;
+  border:none;border-radius:8px;font-size:.76rem;font-weight:800;cursor:pointer;transition:all .15s;}
+.esave:hover{transform:scale(1.08);}
+.ecancel{padding:5px 9px;background:#eceff1;color:#546e7a;border:none;border-radius:8px;font-size:.76rem;cursor:pointer;}
+
+/* ══ STUDENT LIST TABLE (admin) ══ */
+.stu-row{border-bottom:1px solid #f0f4ff;transition:background .15s;}
+.stu-row:hover td{background:#f8f9ff;}
+.stu-panel-wrap{background:linear-gradient(135deg,#f8f9ff,#fff);border-bottom:2px solid #e3eeff;}
+
+/* ══ MOBILE RESPONSIVE ══ */
+@media(max-width:640px){
+  .hero-card{padding:20px 18px;}
+  .hero-avatar{width:48px;height:48px;font-size:1.3rem;}
+  .scale-bar{gap:8px;}
+  .ttab{padding:8px 16px;font-size:.78rem;}
+  .final-score-ring{width:100px;height:100px;}
+  .etbl th,.etbl td{padding:8px 10px;}
+}
+</style>
+</head>
+<body class="dashboard-body">
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="{{ url_for('static',filename='images/logo.png') }}" alt="" class="sidebar-logo">
+    <span class="sidebar-title">School System</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}"    class="nav-item"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+    <a href="{{ url_for('grades') }}"       class="nav-item active"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+    {% if role in ['admin','fee'] %}
+    <a href="{{ url_for('fees') }}"         class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+    <a href="{{ url_for('monthly_fees') }}" class="nav-item"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+    {% endif %}
+    {% if role in ['admin','attendance','teacher'] %}
+    <a href="{{ url_for('attendance') }}"   class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+    {% endif %}
+    <a href="{{ url_for('votes') }}"        class="nav-item"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+    <a href="{{ url_for('announcement') }}" class="nav-item"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+    {% if role != 'teacher' %}
+    <a href="{{ url_for('id_cards') }}"     class="nav-item"><span class="nav-icon">🪪</span><span class="nav-text">{% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}</span></a>
+    {% endif %}
+    <a href="{{ url_for('timetable') }}"    class="nav-item"><span class="nav-icon">📅</span><span class="nav-text">Timetable</span></a>
+  </nav>
+  <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+    <div class="theme-toggle-label"><span id="themeIcon">🌙</span><span>Dark Mode</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="theme-toggle notif-toggle" id="notifToggle" onclick="toggleNotifications()">
+    <div class="theme-toggle-label"><span class="notif-icon">🔕</span><span>Notifications</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="sidebar-logout">
+    <a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+  <div class="navbar">
+    <div class="navbar-left">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <span class="navbar-title">📊 Examinations</span>
+    </div>
+    <div class="navbar-right">
+      <div class="user-badge"><span class="ub-icon">👤</span><span class="ub-name">{{ name|firstname }}</span> <span style="color:var(--secondary);font-size:.75rem;">({{ role|title }})</span></div>
+    </div>
+  </div>
+  <div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:320px;width:90%;"></div>
+  <div class="page-content">
+
+{% if role == 'student' %}
+{% set sid = session.get('student_id','') %}
+
+<!-- ══ HERO ══ -->
+<div class="hero-card">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative;z-index:1;text-align:center;">
+    <div class="hero-avatar">🎓</div>
+    <div style="text-align:center;">
+      <div style="font-size:1.1rem;font-weight:900;letter-spacing:.3px;">{{ name }}</div>
+      <div style="opacity:.8;font-size:.8rem;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <span style="background:rgba(255,255,255,.18);padding:2px 10px;border-radius:10px;font-weight:700;">{{ sid }}</span>
+        {% set cls = student.get('Class','') if student is defined and student else '' %}
+        <span>{% if cls == 'Xaddaano' %}Xaddaano{% elif cls in ['1','2','3','4','5','6','7','8'] %}Class {{ cls }}{% elif cls %}{{ cls }}{% endif %}</span>
+        <span style="background:rgba(255,255,255,.15);padding:2px 10px;border-radius:10px;">Examinations</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GRADE SCALE ══ -->
+<div class="scale-bar">
+  <span style="font-size:.72rem;font-weight:700;color:#78909c;margin-right:4px;align-self:center;">GRADE:</span>
+  <span class="scale-item"><span class="scale-dot scale-a"></span><span class="gp gA" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">A</span><span style="color:#1b5e20;font-size:.72rem;">90–100</span></span>
+  <span class="scale-item"><span class="gp gB" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">B</span><span style="color:#0d47a1;font-size:.72rem;">80–89</span></span>
+  <span class="scale-item"><span class="gp gC" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">C</span><span style="color:#00695c;font-size:.72rem;">70–79</span></span>
+  <span class="scale-item"><span class="gp gD" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">D</span><span style="color:#e65100;font-size:.72rem;">50–69</span></span>
+  <span class="scale-item"><span class="gp gF" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">F</span><span style="color:#b71c1c;font-size:.72rem;">&lt;50</span></span>
+  <span style="font-size:.68rem;color:#90a4ae;align-self:center;white-space:nowrap;">📊 /100</span>
+</div>
+
+<!-- ══ SCHOOL YEAR + TERM TABS ══ -->
+<div style="text-align:center;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;">
+  <span style="font-size:.72rem;font-weight:700;color:#78909c;letter-spacing:.5px;text-transform:uppercase;">📅 {{ school_year if school_year is defined else '' }}</span>
+  {% if role == 'student' %}
+  <a href="{{ url_for('report_card', student_id=session.get('student_id','')) }}" target="_blank" class="btn btn-primary no-print" style="padding:6px 14px;font-size:.76rem;">📄 My Report Card</a>
+  {% endif %}
+</div>
+{% set vis = exam_vis if exam_vis is defined else {'Term1':true,'Term2':true,'Final':true} %}
+{% set first_visible = namespace(tab=none) %}
+{% if vis.get('Term1', true) and first_visible.tab == none %}{% set first_visible.tab = 'T1' %}{% endif %}
+{% if vis.get('Term2', true) and first_visible.tab == none %}{% set first_visible.tab = 'T2' %}{% endif %}
+{% if vis.get('Final', true) and first_visible.tab == none %}{% set first_visible.tab = 'Final' %}{% endif %}
+<div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;justify-content:center;">
+  {% if vis.get('Term1', true) %}<button class="ttab {% if first_visible.tab == 'T1' %}active{% endif %}" id="tabT1"    onclick="switchTerm('T1')">📝 Term 1</button>{% endif %}
+  {% if vis.get('Term2', true) %}<button class="ttab {% if first_visible.tab == 'T2' %}active{% endif %}" id="tabT2"    onclick="switchTerm('T2')">📝 Term 2</button>{% endif %}
+  {% if vis.get('Final', true) %}<button class="ttab {% if first_visible.tab == 'Final' %}active{% endif %}" id="tabFinal" onclick="switchTerm('Final')">🏆 Final</button>{% endif %}
+  {% if not vis.get('Term1',true) and not vis.get('Term2',true) and not vis.get('Final',true) %}
+  <div style="color:var(--subtext);font-size:.85rem;padding:12px;">📋 No exam results available yet</div>
+  {% endif %}
+</div>
+
+{# ── MACRO: render as mobile cards ── #}
+{% macro render_term(term_key, term_label, avg) %}
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+  {# Header row with term label + avg #}
+  <div style="background:linear-gradient(135deg,#1a237e,#1565c0);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div style="color:white;font-weight:900;font-size:.92rem;">{{ term_label }}</div>
+    {# Avg only shown if ALL subjects have scores — else Pending #}
+    {% set filled = [] %}
+    {% for subj in subjects %}
+      {% set g = grades[term_key].get(subj, {}) %}
+      {% set score = (g.get('score',0)|float) if g is mapping else (g|float) %}
+      {% if score > 0 %}{% set _ = filled.append(1) %}{% endif %}
+    {% endfor %}
+    {% if filled|length == subjects|length and avg > 0 %}
+      {% set ac='gA' if avg>=90 else 'gB' if avg>=80 else 'gC' if avg>=70 else 'gD' if avg>=50 else 'gF' %}
+      <span class="gp {{ac}}" style="width:auto;border-radius:10px;padding:4px 14px;font-size:.78rem;">Avg {{ avg }}%</span>
+    {% else %}
+      <span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);padding:4px 14px;border-radius:10px;font-size:.74rem;font-weight:700;">⏳ Avg: Pending</span>
+    {% endif %}
+  </div>
+
+  {# TABLE — scrollable on mobile #}
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+    <table class="etbl" style="min-width:520px;">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Quiz<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/20</span></th>
+          <th>Att<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/10</span></th>
+          <th>Score<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/70</span></th>
+          <th>Total<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/100</span></th>
+          <th>Grade</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for subj in subjects %}
+        {% set g = grades[term_key].get(subj, {}) %}
+        {% set score = (g.get('score',0)|float) if g is mapping else (g|float) %}
+        {% set bille = (g.get('bille',0)|float) if g is mapping else 0 %}
+        {% set att   = (g.get('attendance',0)|float) if g is mapping else 0 %}
+        {% set score = [score, 70.0]|min %}
+        {% set bille = [bille, 20.0]|min %}
+        {% set att   = [att,   10.0]|min %}
+        {% set total = [(score + bille + att), 100.0]|min|round(1) %}
+        {% set gc = 'gA' if total>=90 else 'gB' if total>=80 else 'gC' if total>=70 else 'gD' if total>=50 else 'gF' if total>0 else '' %}
+        {% set gl = 'A'  if total>=90 else 'B'  if total>=80 else 'C'  if total>=70 else 'D'  if total>=50 else 'F'  if total>0 else '—' %}
+        {% set tc = 'tb-A' if total>=90 else 'tb-B' if total>=80 else 'tb-C' if total>=70 else 'tb-D' if total>=50 else 'tb-F' if total>0 else '' %}
+        {% set spct = ((score/70)*100)|round(0)|int if score>0 else 0 %}
+        <tr>
+          <td style="font-weight:700;font-size:.86rem;">{{ subj }}</td>
+          <td>
+            {% if bille > 0 %}<span style="font-weight:800;color:#1565c0;">{{ bille|int if bille==bille|int else bille }}</span>
+            {% else %}<span style="color:#bbb;">—</span>{% endif %}
+          </td>
+          <td>
+            <span style="font-weight:800;color:#00796b;">{{ att|round(1) if att > 0 else '0' }}</span>
+          </td>
+          <td>
+            {% if score > 0 %}
+            <span style="font-weight:900;color:#1a237e;">{{ score|int if score==score|int else score }}</span>
+            <div class="sbar"><div class="sbar-fill" style="--w:{{spct}}%;width:{{spct}}%;background:{% if score>=49 %}#43a047{% elif score>=28 %}#fb8c00{% else %}#e53935{% endif %};"></div></div>
+            {% else %}<span style="color:#bbb;">—</span>{% endif %}
+          </td>
+          <td>
+            {% if total > 0 %}<span class="total-badge {{tc}}">{{ total|int if total==total|int else total }}</span>
+            {% else %}<span style="color:#bbb;">—</span>{% endif %}
+          </td>
+          <td>
+            {% if gc %}<span class="gp {{gc}}" style="width:34px;height:34px;font-size:.8rem;">{{ gl }}</span>
+            {% else %}<span style="color:#bbb;">—</span>{% endif %}
+          </td>
+          <td>
+            {% if total > 0 %}
+              {% if total >= 50 %}<span class="chip chip-pass">✅ Pass</span>
+              {% else %}<span class="chip chip-fail">❌ Fail</span>{% endif %}
+            {% else %}<span class="chip chip-pend">⏳ Pending</span>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endmacro %}
+
+<!-- TERM 1 -->
+{% if vis.get('Term1', true) %}<div id="secT1">{{ render_term('Term1','📝 Term 1 Results', t1_avg) }}</div>{% endif %}
+<!-- TERM 2 -->
+{% if vis.get('Term2', true) %}<div id="secT2" style="display:none;">{{ render_term('Term2','📝 Term 2 Results', t2_avg) }}</div>{% endif %}
+
+<!-- FINAL -->
+{% if vis.get('Final', true) %}
+<div id="secFinal" style="display:none;">
+<div class="card">
+  <div class="card-title" style="margin-bottom:20px;">🏆 Final Results</div>
+  {# Show final only if BOTH terms have data #}
+  {% if t1_avg > 0 and t2_avg > 0 and final > 0 %}
+  {% set fg='#1b5e20' if final>=90 else '#0d47a1' if final>=80 else '#00695c' if final>=70 else '#e65100' if final>=50 else '#b71c1c' %}
+  <div style="text-align:center;padding:10px 0 20px;">
+    <div class="final-score-ring" style="background:linear-gradient(145deg,{{fg}},{{fg}}99);box-shadow:0 8px 32px {{fg}}66;">
+      <div style="font-size:2.4rem;font-weight:900;color:white;line-height:1;">{{ final }}</div>
+      <div style="font-size:.72rem;color:rgba(255,255,255,.85);font-weight:700;margin-top:2px;">/100</div>
+    </div>
+    <div style="font-size:1rem;font-weight:800;color:{{fg}};">
+      {% if final>=90 %}🌟 Excellent{% elif final>=80 %}👍 Very Good{% elif final>=70 %}✅ Good{% elif final>=50 %}⚠️ Average{% else %}❌ Below Average{% endif %}
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+    <div style="background:#f8f9ff;border-radius:14px;padding:16px;text-align:center;border:1px solid #e8eaf6;">
+      <div style="font-size:.68rem;color:#78909c;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">TERM 1 AVG</div>
+      <div style="font-size:1.6rem;font-weight:900;color:#1565c0;">{{ t1_avg }}</div>
+    </div>
+    <div style="background:#f8f9ff;border-radius:14px;padding:16px;text-align:center;border:1px solid #e8eaf6;">
+      <div style="font-size:.68rem;color:#78909c;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;">TERM 2 AVG</div>
+      <div style="font-size:1.6rem;font-weight:900;color:#1565c0;">{{ t2_avg }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px 20px;color:#90a4ae;">
+    <div style="font-size:4rem;margin-bottom:16px;">🏆</div>
+    <div style="font-weight:800;font-size:.92rem;color:#546e7a;margin-bottom:8px;">Final Result — Pending</div>
+    <div style="font-size:.82rem;">Both Term 1 and Term 2 must be completed</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px;">
+      <div style="background:#f8f9ff;border-radius:12px;padding:14px;border:1px solid #e8eaf6;">
+        <div style="font-size:.68rem;color:#78909c;font-weight:700;text-transform:uppercase;margin-bottom:5px;">TERM 1</div>
+        {% if t1_avg > 0 %}<div style="font-size:1.4rem;font-weight:900;color:#1565c0;">{{ t1_avg }}</div>
+        {% else %}<div style="font-size:.84rem;font-weight:700;color:#bbb;">⏳ Pending</div>{% endif %}
+      </div>
+      <div style="background:#f8f9ff;border-radius:12px;padding:14px;border:1px solid #e8eaf6;">
+        <div style="font-size:.68rem;color:#78909c;font-weight:700;text-transform:uppercase;margin-bottom:5px;">TERM 2</div>
+        {% if t2_avg > 0 %}<div style="font-size:1.4rem;font-weight:900;color:#1565c0;">{{ t2_avg }}</div>
+        {% else %}<div style="font-size:.84rem;font-weight:700;color:#bbb;">⏳ Pending</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endif %}{# end vis.get('Final') #}
+
+{% else %}
+<!-- ══════ ADMIN / GRADES ROLE ══════ -->
+<div class="hero-card" style="margin-bottom:18px;">
+  <div style="position:relative;z-index:1;text-align:center;">
+    <div style="font-size:1.15rem;font-weight:900;margin-bottom:5px;">📊 Grade Book</div>
+    <div style="opacity:.8;font-size:.82rem;">Click any score cell to edit — Score /70 · Quiz /20 · Att /10 · Total /100</div>
+  </div>
+</div>
+
+<!-- Grade legend -->
+<div class="scale-bar" style="margin-bottom:14px;justify-content:center;">
+  <span style="font-size:.72rem;font-weight:700;color:#78909c;align-self:center;margin-right:4px;">GRADE:</span>
+  <span class="scale-item"><span class="gp gA" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">A</span><span style="color:#1b5e20;font-size:.72rem;">90–100</span></span>
+  <span class="scale-item"><span class="gp gB" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">B</span><span style="color:#0d47a1;font-size:.72rem;">80–89</span></span>
+  <span class="scale-item"><span class="gp gC" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">C</span><span style="color:#00695c;font-size:.72rem;">70–79</span></span>
+  <span class="scale-item"><span class="gp gD" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">D</span><span style="color:#e65100;font-size:.72rem;">50–69</span></span>
+  <span class="scale-item"><span class="gp gF" style="width:auto;border-radius:8px;padding:2px 9px;font-size:.7rem;">F</span><span style="color:#b71c1c;font-size:.72rem;">&lt;50</span></span>
+</div>
+
+<!-- ══ EXAM VISIBILITY CONTROLS (admin only) ══ -->
+{% set vis = exam_vis if exam_vis is defined else {'Term1':true,'Term2':true,'Final':true} %}
+<div class="card" style="margin-bottom:14px;padding:14px 16px;">
+  <div class="card-title" style="margin-bottom:10px;">👁 Exam Visibility — All Classes</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+    {% for term_key, term_label, term_icon in [('Term1','Term 1','📝'),('Term2','Term 2','📝'),('Final','Final','🏆')] %}
+    {% set is_vis = vis.get(term_key, true) %}
+    <button
+      id="examVisBtn_{{ term_key }}"
+      onclick="toggleExamVis('{{ term_key }}')"
+      class="btn {{ 'btn-success' if is_vis else 'btn-danger' }}"
+      style="min-width:140px;gap:8px;">
+      <span id="examVisIcon_{{ term_key }}">{{ '👁' if is_vis else '🚫' }}</span>
+      <span id="examVisLabel_{{ term_key }}">{{ term_icon }} {{ term_label }}: {{ 'Visible' if is_vis else 'Hidden' }}</span>
+    </button>
+    {% endfor %}
+  </div>
+  <div style="text-align:center;margin-top:8px;font-size:.74rem;color:var(--subtext);">
+    Tap a term to show/hide it for <strong>all students</strong>
+  </div>
+</div>
+
+<div style="margin-bottom:16px;display:flex;justify-content:center;">
+  <div style="
+    display:flex;align-items:center;gap:10px;
+    background:white;
+    border-radius:50px;
+    padding:12px 20px;
+    box-shadow:0 4px 20px rgba(21,101,192,.13);
+    border:2px solid #e3eaff;
+    width:100%;max-width:520px;
+    transition:border .2s,box-shadow .2s;
+  " onclick="document.getElementById('gradeSearch').focus()">
+    <span style="font-size:1.1rem;flex-shrink:0;">🔍</span>
+    <input type="text" id="gradeSearch"
+      placeholder="Search student name or ID..."
+      oninput="filterStudents(this.value)"
+      onfocus="this.parentElement.style.borderColor='#1565c0';this.parentElement.style.boxShadow='0 4px 24px rgba(21,101,192,.22)'"
+      onblur="this.parentElement.style.borderColor='#e3eaff';this.parentElement.style.boxShadow='0 4px 20px rgba(21,101,192,.13)'"
+      style="
+        border:none;outline:none;background:transparent;
+        font-size:.92rem;font-weight:500;color:#1a237e;
+        width:100%;font-family:inherit;
+      "
+      autocomplete="off">
+  </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="padding:16px 18px;border-bottom:1px solid #f0f4ff;font-weight:800;font-size:.88rem;color:#1a237e;display:flex;align-items:center;justify-content:center;gap:8px;">
+    👥 Students
+    <span style="font-size:.74rem;font-weight:600;color:#90a4ae;">Tap a student → enter grades</span>
+  </div>
+  {% if students %}
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr style="background:linear-gradient(135deg,#1a237e,#1565c0);">
+      <th style="padding:10px 14px;color:white;font-size:.72rem;font-weight:700;text-align:left;">ID</th>
+      <th style="padding:10px 14px;color:white;font-size:.72rem;font-weight:700;text-align:left;">Name</th>
+      <th style="padding:10px 14px;color:white;font-size:.72rem;font-weight:700;text-align:left;">Class</th>
+      <th style="padding:10px 14px;color:white;font-size:.72rem;font-weight:700;text-align:center;">Grades</th>
+    </tr></thead>
+    <tbody id="gradesTbody">
+    {% for s in students %}
+    <tr class="stu-row" id="sr_{{s.get('ID','')}}" data-id="{{s.get('ID','')|lower}}" data-name="{{s.get('Name','')|lower}}">
+      <td style="padding:11px 14px;"><span class="badge badge-primary" style="font-size:.7rem;letter-spacing:.5px;">{{s.get('ID','')}}</span></td>
+      <td style="padding:11px 14px;font-weight:700;font-size:.86rem;">{{s.get('Name','')}}</td>
+      {% set scls = s.get('Class','') %}
+      <td style="padding:11px 14px;font-size:.78rem;color:#78909c;font-weight:600;">{% if scls == 'Xaddaano' %}Xaddaano{% elif scls in ['1','2','3','4','5','6','7','8'] %}Cls {{ scls }}{% else %}{{ scls }}{% endif %}</td>
+      <td style="padding:11px 14px;text-align:center;">
+        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+        <button style="
+          padding:7px 14px;border:none;border-radius:12px;cursor:pointer;
+          background:linear-gradient(135deg,#1565c0,#1976d2);color:white;
+          font-size:.78rem;font-weight:800;letter-spacing:.4px;
+          transition:all .2s;box-shadow:0 3px 10px rgba(21,101,192,.3);"
+          onmouseover="this.style.transform='translateY(-2px)'"
+          onmouseout="this.style.transform=''"
+          onclick="toggleGradePanel('{{s.get('ID','')}}','{{s.get('Name','')}}','{{s.get('Class','')}}')">
+          📊 Grades
+        </button>
+        <a href="{{ url_for('report_card', student_id=s.get('ID','')) }}" target="_blank"
+           style="padding:7px 12px;border:none;border-radius:12px;cursor:pointer;
+           background:linear-gradient(135deg,#2e7d32,#388e3c);color:white;
+           font-size:.78rem;font-weight:800;text-decoration:none;display:inline-flex;
+           align-items:center;box-shadow:0 3px 10px rgba(46,125,50,.3);">
+          📄 Report
+        </a>
+        </div>
+      </td>
+    </tr>
+    <tr id="gp_{{s.get('ID','')}}" style="display:none;">
+      <td colspan="4" style="padding:0;" class="stu-panel-wrap">
+        <div id="gpanel_{{s.get('ID','')}}" style="padding:16px 18px;"></div>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:36px;color:#90a4ae;">
+    <div style="font-size:3rem;margin-bottom:10px;">👥</div>
+    <div style="font-weight:700;">No students found</div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+  </div>
+</div>
+
+<script>
+var SUBJECTS   = {{ subjects | tojson }};
+var _openId    = null;
+var _activeTerm= 'Term1';
+var MAX_SCORE  = 70;
+var MAX_BILLE  = 20;
+var MAX_ATT    = 10;
+
+function gradeFromTotal(t){
+  if(t>=90) return {char:'A',cls:'gA',tc:'tb-A',color:'#1b5e20'};
+  if(t>=80) return {char:'B',cls:'gB',tc:'tb-B',color:'#0d47a1'};
+  if(t>=70) return {char:'C',cls:'gC',tc:'tb-C',color:'#00695c'};
+  if(t>=50) return {char:'D',cls:'gD',tc:'tb-D',color:'#e65100'};
+  if(t> 0)  return {char:'F',cls:'gF',tc:'tb-F',color:'#b71c1c'};
+  return {char:'—',cls:'',tc:'',color:'#bbb'};
+}
+
+/* ── TERM SWITCH ── */
+/* ── EXAM VISIBILITY TOGGLE (admin) ── */
+function toggleExamVis(term){
+  var btn   = document.getElementById('examVisBtn_'  + term);
+  var icon  = document.getElementById('examVisIcon_' + term);
+  var label = document.getElementById('examVisLabel_'+ term);
+  if(!btn) return;
+
+  var orig = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;"></span>';
+  btn.disabled = true;
+
+  var termLabels = {Term1:'📝 Term 1', Term2:'📝 Term 2', Final:'🏆 Final'};
+
+  fetch('/toggle_exam_term', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'same-origin',
+    body: JSON.stringify({term: term})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    btn.disabled = false;
+    if(d.success){
+      var isVis = d.visible;
+      btn.className = 'btn ' + (isVis ? 'btn-success' : 'btn-danger');
+      icon.textContent  = isVis ? '👁' : '🚫';
+      label.textContent = (termLabels[term] || term) + ': ' + (isVis ? 'Visible' : 'Hidden');
+      btn.style.minWidth = '140px';
+      toast((termLabels[term]||term) + ' is now ' + (isVis ? '👁 visible' : '🚫 hidden') + ' for all students', isVis ? 'success' : 'warning', 3500);
+    } else {
+      btn.innerHTML = orig;
+      toast(d.message || 'Error', 'error');
+    }
+  })
+  .catch(function(){
+    btn.disabled = false;
+    btn.innerHTML = orig;
+    toast('Connection failed — please try again', 'error');
+  });
+}
+
+function switchTerm(t){
+  ['T1','T2','Final'].forEach(function(x){
+    var s=document.getElementById('sec'+x);
+    var b=document.getElementById('tab'+x);
+    if(s) s.style.display=x===t?'block':'none';
+    if(b) b.classList.toggle('active',x===t);
+  });
+}
+
+/* ── FILTER ── */
+function filterStudents(q){
+  var ql=(q||'').toLowerCase();
+  document.querySelectorAll('#gradesTbody tr.stu-row').forEach(function(r){
+    var show=!ql||(r.dataset.id||'').includes(ql)||(r.dataset.name||'').includes(ql);
+    r.style.display=show?'':'none';
+    var id=r.id.replace('sr_','');
+    var gp=document.getElementById('gp_'+id);
+    if(gp&&!show) gp.style.display='none';
+  });
+}
+
+/* ── TOGGLE PANEL ── */
+function toggleGradePanel(sid,sname,scls){
+  if(_openId&&_openId!==sid){
+    var prev=document.getElementById('gp_'+_openId);
+    if(prev) prev.style.display='none';
+  }
+  var row=document.getElementById('gp_'+sid);
+  if(!row) return;
+  if(row.style.display!=='none'){row.style.display='none';_openId=null;return;}
+  _openId=sid;
+  row.style.display='table-row';
+  var panel=document.getElementById('gpanel_'+sid);
+  panel.innerHTML='<div style="padding:8px;">'+skeleton(4)+'</div>';
+  fetch('/get_student_grades?student_id='+encodeURIComponent(sid))
+    .then(function(r){return r.json();})
+    .then(function(data){renderGradePanel(sid,sname,scls,data);})
+    .catch(function(){
+      var p=document.getElementById('gpanel_'+sid);
+      if(p) p.innerHTML='<p style="color:var(--error);padding:12px;">Error loading grades</p>';
+    });
+}
+
+/* ── RENDER GRADE PANEL (admin) ── */
+function renderGradePanel(sid,sname,scls,data){
+  var panel=document.getElementById('gpanel_'+sid);
+  if(!panel) return;
+
+  function buildTable(term){
+    var tdata=data[term]||{};
+    var html='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+    html+='<table class="etbl" style="min-width:520px;">';
+    html+='<thead><tr>';
+    html+='<th>Subject</th>';
+    html+='<th>Quiz<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/20</span></th>';
+    html+='<th>Att<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/10</span></th>';
+    html+='<th>Score<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/70</span></th>';
+    html+='<th>Total<br><span style="font-weight:400;opacity:.7;font-size:.68rem;">/100</span></th>';
+    html+='<th>Grade</th><th>Status</th>';
+    html+='</tr></thead><tbody>';
+
+    SUBJECTS.forEach(function(subj){
+      var g    =tdata[subj]||{};
+      var score=typeof g==='object'?(parseFloat(g.score)||0):(parseFloat(g)||0);
+      var bille=typeof g==='object'?(parseFloat(g.bille)||0):0;
+      var att  =typeof g==='object'?(parseFloat(g.attendance)||0):0;
+      score=Math.min(Math.max(score,0),MAX_SCORE);
+      bille=Math.min(Math.max(bille,0),MAX_BILLE);
+      att  =Math.min(Math.max(att,  0),MAX_ATT);
+      var total=Math.min(Math.round((score+bille+att)*10)/10,100);
+      var gr=gradeFromTotal(total);
+      var spct=score>0?Math.round((score/MAX_SCORE)*100):0;
+      var safeSubj=subj.replace(/'/g,"\\'");
+
+      html+='<tr style="transition:background .15s;">';
+      html+='<td style="font-weight:700;font-size:.86rem;">'+subj+'</td>';
+
+      /* Quiz */
+      html+='<td class="ecell" title="Click to edit Quiz (max 20)">';
+      html+='<span class="cv" style="font-weight:800;color:#1565c0;font-size:.88rem;">'+(bille>0?bille:'—')+'</span></td>';
+
+      /* Att — read-only: always derived live from real attendance records */
+      html+='<td title="Auto-calculated from the Attendance page — not editable here">';
+      html+='<span class="cv" style="font-weight:800;color:#00796b;font-size:.88rem;">'+(att>0?att:'0')+' <span style="font-size:.65rem;opacity:.55;">🔒</span></span></td>';
+
+      /* Score */
+      html+='<td class="ecell" title="Click to edit Score (max 70)">';
+      html+='<span class="cv" style="font-weight:900;color:#1a237e;font-size:.9rem;">'+(score>0?score:'—')+'</span>';
+      if(score>0) html+='<div class="sbar"><div class="sbar-fill" style="width:'+spct+'%;background:'+(score>=49?'#43a047':score>=28?'#fb8c00':'#e53935')+'"></div></div>';
+      html+='</td>';
+
+      /* Total */
+      html+='<td>';
+      if(total>0) html+='<span class="total-badge '+gr.tc+'" style="font-weight:900;">'+total+'</span>';
+      else html+='<span style="color:#bbb;">—</span>';
+      html+='</td>';
+
+      /* Grade pill */
+      html+='<td>';
+      if(gr.cls) html+='<span class="gp '+gr.cls+'" style="width:34px;height:34px;font-size:.82rem;">'+gr.char+'</span>';
+      else html+='<span style="color:#bbb;">—</span>';
+      html+='</td>';
+
+      /* Status */
+      html+='<td>';
+      if(total>0||score>0){
+        html+=total>=50?'<span class="chip chip-pass">✅ Pass</span>':'<span class="chip chip-fail">❌ Fail</span>';
+      } else html+='<span class="chip chip-pend">⏳ Pending</span>';
+      html+='</td></tr>';
+    });
+
+    html+='</tbody></table></div>';
+    return html;
+  }
+
+  function renderPanel(term){
+    _activeTerm=term;
+    var html='';
+    /* Header */
+    html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">';
+    html+='<div>';
+    html+='<div style="font-weight:900;font-size:.92rem;color:#1a237e;">'+sname+'</div>';
+    html+='<div style="font-size:.74rem;color:#78909c;margin-top:2px;">'+sid+' &nbsp;·&nbsp; Class '+scls+'</div>';
+    html+='</div>';
+    html+='<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">';
+    ['Term1','Term2'].forEach(function(t){
+      html+='<button class="ttab'+(t===term?' active':'')+'" onclick="switchGPanel(\''+t+'\')" style="padding:6px 14px;font-size:.74rem;">'+t+'</button>';
+    });
+    html+='</div>';
+    html+='</div>';
+    html+='<div style="font-size:.72rem;color:#90a4ae;margin-bottom:10px;display:flex;align-items:center;gap:5px;">💡 <span>Click any score cell to edit &amp; auto-save</span></div>';
+    html+=buildTable(term);
+    panel.innerHTML=html;
+
+    /* Attach click handlers to .ecell */
+    panel.querySelectorAll('.ecell').forEach(function(td){
+      var subj=td.closest('tr').querySelector('td:first-child').textContent.trim();
+      var fieldMap={'Quiz':'bille','Att':'attendance','Score':'score'};
+      var header=td.closest('table').querySelectorAll('th')[Array.from(td.parentNode.children).indexOf(td)];
+      var hText=header?header.textContent.trim().split('/')[0].trim():'';
+      var field=fieldMap[hText]||(hText.toLowerCase()==='score'?'score':hText.toLowerCase()==='quiz'?'bille':'attendance');
+      var curVal=parseFloat(td.querySelector('.cv')?.textContent)||0;
+      var maxVal=field==='score'?MAX_SCORE:field==='bille'?MAX_BILLE:MAX_ATT;
+      td.addEventListener('click',function(e){editCell(sid,term,subj,field,td,curVal,maxVal);});
+    });
+
+    window.switchGPanel=function(t){renderPanel(t);};
+  }
+  renderPanel('Term1');
+}
+
+/* ── CELL EDIT ── */
+function editCell(sid,term,subj,field,td,curVal,maxVal){
+  if(td.querySelector('.einput')) return;
+  td.classList.add('editing');
+  td.dataset.orig=td.innerHTML;
+  td.innerHTML='<div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;">'
+    +'<input class="einput" type="number" min="0" max="'+maxVal+'" step="0.5" value="'+(curVal||0)+'">'
+    +'<button class="esave">✓</button>'
+    +'<button class="ecancel">✗</button>'
+    +'</div>';
+  var inp=td.querySelector('.einput');
+  var saveBtn=td.querySelector('.esave');
+  var cancelBtn=td.querySelector('.ecancel');
+  saveBtn.onclick=function(e){e.stopPropagation();doSave(e,sid,term,subj,field,maxVal,td);};
+  cancelBtn.onclick=function(e){e.stopPropagation();td.classList.remove('editing');td.innerHTML=td.dataset.orig;};
+  if(inp){inp.focus();inp.select();}
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault();saveBtn.click();}
+    if(e.key==='Escape'){e.preventDefault();cancelBtn.click();}
+  });
+}
+
+function doSave(e,sid,term,subj,field,maxVal,td){
+  var inp=td.querySelector('.einput');
+  var val=parseFloat(inp.value)||0;
+  if(val>maxVal){
+    inp.style.borderColor='#e53935';
+    toast('Max '+field+' = '+maxVal,'error');
+    return;
+  }
+  var btn=e.target;
+  btn.innerHTML='<span class="spinner" style="width:9px;height:9px;border-width:1.5px;"></span>';
+  btn.disabled=true;
+  fetch('/edit_grade',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({student_id:sid,subject:subj,term:term,field:field,value:val})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    td.classList.remove('editing');
+    if(d.success){
+      toast(d.message,'success');
+      setTimeout(function(){
+        if(_openId===sid){
+          var sname=document.querySelector('#sr_'+sid+' td:nth-child(2)')?.textContent||'';
+          fetch('/get_student_grades?student_id='+encodeURIComponent(sid))
+            .then(function(r){return r.json();})
+            .then(function(data){renderGradePanel(sid,sname,'',data);});
+        }
+      },400);
+    } else {
+      toast(d.message||'Error','error');
+      td.innerHTML='<span class="cv" style="color:var(--error);">Err</span>';
+    }
+  }).catch(function(){
+    td.classList.remove('editing');
+    toast('Connection error!','error');
+    td.innerHTML=td.dataset.orig;
+  });
+}
+</script>
+</body>
+</html>

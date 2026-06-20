@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Report Card — {{ student.get('Name','') }}</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+<style>
+/* ── REPORT CARD ── */
+.rc-page{max-width:700px;margin:0 auto;padding:16px;}
+.rc-header{
+  background:linear-gradient(135deg,var(--brand-start),var(--brand-end));
+  border-radius:var(--radius);padding:24px 20px;
+  color:white;text-align:center;margin-bottom:18px;
+}
+.rc-header img{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);margin-bottom:10px;}
+.rc-name{font-size:1.2rem;font-weight:900;margin-bottom:4px;}
+.rc-meta{opacity:.85;font-size:.82rem;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.rc-badge{background:rgba(255,255,255,.18);padding:3px 12px;border-radius:12px;font-size:.76rem;font-weight:700;}
+
+.rc-section{background:white;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+.rc-section-title{
+  background:linear-gradient(135deg,var(--brand-start),var(--brand-end));
+  color:white;padding:10px 16px;font-size:.82rem;font-weight:800;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.rc-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.rc-table th{background:#f0f4ff;color:var(--dark);padding:9px 12px;font-weight:700;text-align:center;font-size:.76rem;}
+.rc-table td{padding:9px 12px;border-bottom:1px solid #f0f4ff;text-align:center;vertical-align:middle;}
+.rc-table tr:last-child td{border-bottom:none;}
+.rc-table td:first-child{text-align:left;font-weight:600;color:var(--text);}
+.rc-table tr:hover td{background:#fafbff;}
+
+.grade-pill{
+  display:inline-block;padding:2px 10px;border-radius:10px;
+  font-weight:800;font-size:.76rem;
+}
+.gA{background:#e8f5e9;color:#2e7d32;}
+.gB{background:#e3f2fd;color:#1565c0;}
+.gC{background:#e0f2f1;color:#00695c;}
+.gD{background:#fff3e0;color:#e65100;}
+.gF{background:#ffebee;color:#c62828;}
+
+.rc-avg-row td{background:#f0f4ff !important;font-weight:800;font-size:.84rem;}
+
+.rc-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;padding:14px 16px;}
+.rc-stat{text-align:center;padding:14px;background:#f8faff;border-radius:var(--radius-sm);}
+.rc-stat-val{font-size:1.4rem;font-weight:900;color:var(--text);}
+.rc-stat-lbl{font-size:.72rem;color:var(--subtext);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+
+.rc-footer{text-align:center;color:var(--subtext);font-size:.72rem;margin-top:18px;padding-bottom:16px;}
+.rc-print-btn{
+  position:fixed;bottom:20px;right:20px;z-index:100;
+  background:linear-gradient(135deg,var(--brand-start),var(--brand-end));
+  color:white;border:none;border-radius:50px;padding:13px 22px;
+  font-size:.88rem;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 16px rgba(13,71,161,.4);
+  -webkit-tap-highlight-color:transparent;
+}
+.rc-print-btn:hover{transform:translateY(-2px);}
+.hidden-locked{display:none;}
+
+@media print{
+  .rc-print-btn,.navbar,.sidebar,.sidebar-overlay{display:none !important;}
+  .rc-page{max-width:100%;padding:0;}
+  .rc-section{box-shadow:none;border:1px solid #e0e0e0;}
+  body{background:white;}
+}
+</style>
+</head>
+<body>
+{% set vis = exam_vis if exam_vis is defined else {'Term1':true,'Term2':true,'Final':true} %}
+<div class="rc-page">
+
+  <!-- Header -->
+  <div class="rc-header">
+    <img src="{{ url_for('static',filename='images/students/'+student_id+'.jpg') }}"
+         onerror="this.src='{{ url_for('static',filename='images/logo.png') }}'">
+    <div class="rc-name">{{ student.get('Name','') }}</div>
+    <div class="rc-meta">
+      <span class="rc-badge">{{ student_id }}</span>
+      <span class="rc-badge">
+        {% if student.get('Class') in ['1','2','3','4','5','6','7','8'] %}Class {{ student.get('Class') }}
+        {% else %}{{ student.get('Class','') }}{% endif %}
+      </span>
+      <span class="rc-badge">{{ school_year }}</span>
+    </div>
+  </div>
+
+  <!-- Overall Summary -->
+  <div class="rc-section">
+    <div class="rc-section-title">📊 Academic Summary</div>
+    <div class="rc-stat-grid">
+      {% if vis.get('Term1',true) %}
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="color:{% if t1_avg>=90 %}#2e7d32{% elif t1_avg>=70 %}#1565c0{% elif t1_avg>=50 %}#e65100{% else %}#c62828{% endif %};">{{ t1_avg }}</div>
+        <div class="rc-stat-lbl">Term 1 Avg</div>
+      </div>
+      {% endif %}
+      {% if vis.get('Term2',true) %}
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="color:{% if t2_avg>=90 %}#2e7d32{% elif t2_avg>=70 %}#1565c0{% elif t2_avg>=50 %}#e65100{% else %}#c62828{% endif %};">{{ t2_avg }}</div>
+        <div class="rc-stat-lbl">Term 2 Avg</div>
+      </div>
+      {% endif %}
+      {% if vis.get('Final',true) and final_avg > 0 %}
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="color:{% if final_avg>=90 %}#2e7d32{% elif final_avg>=70 %}#1565c0{% elif final_avg>=50 %}#e65100{% else %}#c62828{% endif %};">{{ final_avg }}</div>
+        <div class="rc-stat-lbl">Final Avg</div>
+      </div>
+      {% endif %}
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="color:{% if att_pct>=90 %}#2e7d32{% elif att_pct>=75 %}#e65100{% else %}#c62828{% endif %};">{{ att_pct }}%</div>
+        <div class="rc-stat-lbl">Attendance</div>
+      </div>
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="color:{% if fee_status=='Paid' %}#2e7d32{% elif fee_status=='Partial' %}#e65100{% else %}#c62828{% endif %};">{{ fee_status }}</div>
+        <div class="rc-stat-lbl">Fee Status</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Term 1 Grades -->
+  {% if vis.get('Term1',true) and term1 %}
+  <div class="rc-section">
+    <div class="rc-section-title">📝 Term 1 Grades</div>
+    <div style="overflow-x:auto;">
+    <table class="rc-table">
+      <thead><tr><th style="text-align:left;">Subject</th><th>Score /70</th><th>Quiz /20</th><th>Att /10</th><th>Total /100</th><th>Grade</th></tr></thead>
+      <tbody>
+      {% for subj in subjects %}{% if subj in term1 %}{% set r = term1[subj] %}
+      <tr>
+        <td>{{ subj }}</td>
+        <td>{{ r.Score|int if r.Score == r.Score|int else r.Score }}</td>
+        <td>{{ r.Bille|int if r.Bille == r.Bille|int else r.Bille }}</td>
+        <td>{{ r.Attendance|int if r.Attendance == r.Attendance|int else r.Attendance }}</td>
+        <td><strong>{{ r.Total|int if r.Total == r.Total|int else r.Total }}</strong></td>
+        <td><span class="grade-pill g{{ grade_letter(r.Total) }}">{{ grade_letter(r.Total) }}</span></td>
+      </tr>
+      {% endif %}{% endfor %}
+      <tr class="rc-avg-row"><td colspan="4">Term 1 Average</td><td>{{ t1_avg }}</td><td><span class="grade-pill g{{ grade_letter(t1_avg) }}">{{ grade_letter(t1_avg) }}</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Term 2 Grades -->
+  {% if vis.get('Term2',true) and term2 %}
+  <div class="rc-section">
+    <div class="rc-section-title">📝 Term 2 Grades</div>
+    <div style="overflow-x:auto;">
+    <table class="rc-table">
+      <thead><tr><th style="text-align:left;">Subject</th><th>Score /70</th><th>Quiz /20</th><th>Att /10</th><th>Total /100</th><th>Grade</th></tr></thead>
+      <tbody>
+      {% for subj in subjects %}{% if subj in term2 %}{% set r = term2[subj] %}
+      <tr>
+        <td>{{ subj }}</td>
+        <td>{{ r.Score|int if r.Score == r.Score|int else r.Score }}</td>
+        <td>{{ r.Bille|int if r.Bille == r.Bille|int else r.Bille }}</td>
+        <td>{{ r.Attendance|int if r.Attendance == r.Attendance|int else r.Attendance }}</td>
+        <td><strong>{{ r.Total|int if r.Total == r.Total|int else r.Total }}</strong></td>
+        <td><span class="grade-pill g{{ grade_letter(r.Total) }}">{{ grade_letter(r.Total) }}</span></td>
+      </tr>
+      {% endif %}{% endfor %}
+      <tr class="rc-avg-row"><td colspan="4">Term 2 Average</td><td>{{ t2_avg }}</td><td><span class="grade-pill g{{ grade_letter(t2_avg) }}">{{ grade_letter(t2_avg) }}</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Final -->
+  {% if vis.get('Final',true) and final_avg > 0 %}
+  <div class="rc-section">
+    <div class="rc-section-title">🏆 Final Average</div>
+    <div style="padding:20px;text-align:center;">
+      <div style="font-size:3rem;font-weight:900;color:{% if final_avg>=90 %}#2e7d32{% elif final_avg>=80 %}#1565c0{% elif final_avg>=70 %}#00695c{% elif final_avg>=50 %}#e65100{% else %}#c62828{% endif %};">{{ final_avg }}</div>
+      <div style="margin-top:8px;"><span class="grade-pill g{{ grade_letter(final_avg) }}" style="font-size:1rem;padding:6px 20px;">{{ grade_letter(final_avg) }}</span></div>
+      <div style="color:var(--subtext);font-size:.82rem;margin-top:10px;">Overall Performance</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Attendance -->
+  <div class="rc-section">
+    <div class="rc-section-title">📋 Attendance</div>
+    <div class="rc-stat-grid">
+      <div class="rc-stat"><div class="rc-stat-val">{{ att_total }}</div><div class="rc-stat-lbl">Total Days</div></div>
+      <div class="rc-stat"><div class="rc-stat-val" style="color:#2e7d32;">{{ att_present }}</div><div class="rc-stat-lbl">Present</div></div>
+      <div class="rc-stat"><div class="rc-stat-val" style="color:#c62828;">{{ att_total - att_present }}</div><div class="rc-stat-lbl">Absent</div></div>
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="color:{% if att_pct>=90 %}#2e7d32{% elif att_pct>=75 %}#e65100{% else %}#c62828{% endif %};">{{ att_pct }}%</div>
+        <div class="rc-stat-lbl">Rate</div>
+      </div>
+    </div>
+    <div style="padding:0 16px 14px;">
+      <div class="progress-wrap"><div class="progress-fill" style="width:{{ att_pct }}%;background:{% if att_pct>=90 %}#2e7d32{% elif att_pct>=75 %}#f57c00{% else %}#c62828{% endif %};"></div></div>
+    </div>
+  </div>
+
+  <!-- Fee Status -->
+  <div class="rc-section">
+    <div class="rc-section-title">💰 Fee Status</div>
+    <div class="rc-stat-grid">
+      <div class="rc-stat"><div class="rc-stat-val">${{ total_fee|int }}</div><div class="rc-stat-lbl">Total Fee</div></div>
+      <div class="rc-stat"><div class="rc-stat-val" style="color:#2e7d32;">${{ amount_paid|int }}</div><div class="rc-stat-lbl">Paid</div></div>
+      <div class="rc-stat"><div class="rc-stat-val" style="color:{% if balance<=0 %}#2e7d32{% else %}#c62828{% endif %};">${{ balance|int }}</div><div class="rc-stat-lbl">Balance</div></div>
+      <div class="rc-stat">
+        <div class="rc-stat-val" style="font-size:1rem;color:{% if fee_status=='Paid' %}#2e7d32{% elif fee_status=='Partial' %}#e65100{% else %}#c62828{% endif %};">{{ fee_status }}</div>
+        <div class="rc-stat-lbl">Status</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rc-footer">
+    Generated on: {{ school_year }} · School Management System
+  </div>
+</div>
+
+<button class="rc-print-btn no-print" onclick="window.print()">🖨️ Print / Save PDF</button>
+</body>
+</html>

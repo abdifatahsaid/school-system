@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Monthly Fees - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static',filename='images/logo.png') }}">
+<style>
+/* ── MONTHLY GRID ── */
+.month-grid-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid #e8eaf6;}
+.month-grid{border-collapse:collapse;width:100%;min-width:900px;font-size:.82rem;}
+.month-grid th{background:linear-gradient(135deg,#1a237e,#283593);color:white;padding:11px 10px;text-align:center;font-weight:700;letter-spacing:.04em;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1);}
+.month-grid th.sticky-col{position:sticky;left:0;z-index:2;background:linear-gradient(135deg,#0d1b5e,#1a237e);}
+.month-grid th.sticky-col2{position:sticky;left:120px;z-index:2;background:linear-gradient(135deg,#0d1b5e,#1a237e);}
+.month-grid td{padding:9px 10px;border-bottom:1px solid #f0f4ff;border-right:1px solid #f0f4ff;vertical-align:middle;text-align:center;}
+.month-grid td.sticky-col{position:sticky;left:0;background:white;z-index:1;font-weight:700;text-align:left;min-width:120px;border-right:2px solid #e8eaf6;}
+.month-grid td.sticky-col2{position:sticky;left:120px;background:white;z-index:1;text-align:left;min-width:140px;border-right:2px solid #e8eaf6;}
+.month-grid tr:hover td{background:#f5f7ff;}
+.month-grid tr:hover td.sticky-col,.month-grid tr:hover td.sticky-col2{background:#eef2ff;}
+
+/* ── MONTH CELLS ── */
+.mcell{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:72px;}
+.mcell-paid  {background:#e8f5e9;border-radius:8px;padding:5px 8px;border:1px solid #a5d6a7;}
+.mcell-part  {background:#fff8e1;border-radius:8px;padding:5px 8px;border:1px solid #ffe082;}
+.mcell-unpaid{background:#fafafa;border-radius:8px;padding:5px 8px;border:1px solid #e0e0e0;}
+.mcell-amt   {font-weight:800;font-size:.85rem;}
+.mcell-amt.green{color:#2e7d32;} .mcell-amt.amber{color:#e65100;} .mcell-amt.grey{color:#9e9e9e;}
+.mcell-bal   {font-size:.7rem;color:#607d8b;}
+.mcell-icon  {font-size:.9rem;}
+.mcell-btn   {border:none;border-radius:6px;padding:3px 8px;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:2px;}
+.mcell-btn:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.mcell-pay {background:linear-gradient(135deg,#00897B,#00695C);color:white;}
+.mcell-edit{background:linear-gradient(135deg,#F57C00,#E65100);color:white;}
+
+/* ── YEAR PROGRESS ── */
+.year-bar{height:8px;border-radius:4px;background:#e0e0e0;overflow:hidden;margin:4px 0;}
+.year-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#1565c0,#00897b);transition:width 1s ease;}
+
+/* ── SUMMARY ROW ── */
+.sum-chip{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700;}
+.sum-paid{background:#e8f5e9;color:#1b5e20;}
+.sum-part{background:#fff8e1;color:#e65100;}
+.sum-none{background:#ffebee;color:#b71c1c;}
+
+/* ── MONTH HEADER CHIP ── */
+.mhdr{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.mhdr-cur{background:rgba(255,215,0,.25);border-radius:6px;padding:2px 6px;}
+.mhdr-name{font-size:.82rem;}
+.mhdr-fee {font-size:.68rem;opacity:.75;}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;align-items:center;}
+.tab-btn{padding:10px 20px;border-radius:20px;border:2px solid #e8eaf6;background:white;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .2s;color:var(--subtext);min-height:44px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.tab-btn.active{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;border-color:transparent;box-shadow:0 4px 12px rgba(21,101,192,.25);}
+
+/* ── MODAL ── */
+.mf-modal{max-width:400px;}
+.mf-info-box{background:linear-gradient(135deg,#e3f2fd,#e8f5e9);border-radius:10px;padding:16px;margin-bottom:16px;}
+.mf-info-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+.mf-info-row:last-child{border:none;}
+.mf-lbl{font-size:.75rem;font-weight:600;color:#607d8b;}
+.mf-val{font-weight:700;font-size:.9rem;}
+</style>
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+</head>
+<body class="dashboard-body">
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="{{ url_for('static',filename='images/logo.png') }}" alt="Logo" class="sidebar-logo">
+    <span class="sidebar-title">School System</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}"    class="nav-item"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+    <a href="{{ url_for('grades') }}"       class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+    <a href="{{ url_for('fees') }}"         class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+    <a href="{{ url_for('monthly_fees') }}" class="nav-item active"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+    {% if role in ['admin','attendance','teacher'] %}
+    <a href="{{ url_for('attendance') }}"   class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+    {% endif %}
+    <a href="{{ url_for('votes') }}"        class="nav-item"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+    <a href="{{ url_for('announcement') }}" class="nav-item"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+    {% if role != 'teacher' %}
+    <a href="{{ url_for('id_cards') }}"     class="nav-item"><span class="nav-icon">🪪</span><span class="nav-text">{% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}</span></a>
+    {% endif %}
+    <a href="{{ url_for('timetable') }}"    class="nav-item"><span class="nav-icon">📅</span><span class="nav-text">Timetable</span></a>
+  </nav>
+  <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+    <div class="theme-toggle-label"><span id="themeIcon">🌙</span><span>Dark Mode</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="theme-toggle notif-toggle" id="notifToggle" onclick="toggleNotifications()">
+    <div class="theme-toggle-label"><span class="notif-icon">🔕</span><span>Notifications</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="sidebar-logout">
+    <a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+  <div class="navbar">
+    <div class="navbar-left">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <span class="navbar-title">🗓️ Monthly Fees{% if school_year is defined %} <span style="font-size:.7rem;background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:8px;font-weight:700;margin-left:6px;">📅 {{ school_year }}</span>{% endif %}</span>
+    </div>
+    <div class="navbar-right">
+      <div class="user-badge"><span class="ub-icon">👤</span><span class="ub-name">{{ name|firstname }}</span> <span style="color:var(--secondary);font-size:.8rem;">({{ role|title }})</span></div>
+    </div>
+  </div>
+
+  <div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px;width:90%;"></div>
+  <div class="page-content">
+
+  <!-- HEADER -->
+  <div style="background:linear-gradient(135deg,#0d1b5e,#1565C0,#00897B);border-radius:var(--radius);padding:28px 30px;color:white;margin-bottom:25px;position:relative;overflow:hidden;text-align:center;">
+    <div style="position:absolute;right:-20px;top:-20px;font-size:8rem;opacity:.06;">🗓️</div>
+    <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:6px;">📅 Monthly Fee Tracker</h2>
+    <p style="opacity:.85;">School Year {{ current_year }}–{{ current_year + 1 }} &nbsp;|&nbsp; ${{ monthly_fee|int }} per student per month &nbsp;|&nbsp; Sep → May (9 months)</p>
+    <div style="margin-top:14px;display:flex;gap:20px;flex-wrap:wrap;justify-content:center;">
+      <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px 18px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;">{{ students|length }}</div>
+        <div style="font-size:.75rem;opacity:.8;">Students</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px 18px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;">9</div>
+        <div style="font-size:.75rem;opacity:.8;">Months</div>
+      </div>
+      <div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px 18px;text-align:center;">
+        <div style="font-size:1.4rem;font-weight:800;">${{ (students|length * 9 * monthly_fee)|int }}</div>
+        <div style="font-size:.75rem;opacity:.8;">Total Expected</div>
+      </div>
+    </div>
+  </div>
+
+{% if outstanding_fees is defined and outstanding_fees %}
+<div style="background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-radius:16px;padding:16px 18px;margin-bottom:18px;border-left:5px solid #f57c00;">
+  <div style="font-weight:900;font-size:.9rem;color:#e65100;margin-bottom:10px;">⚠️ Outstanding from Previous Years</div>
+  {% for item in outstanding_fees %}
+  <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(245,124,0,.12);">
+    <span style="font-weight:700;font-size:.84rem;">{{ item.name }} <span style="color:#78909c;font-size:.72rem;">{{ item.id }} · {{ item.year }}</span></span>
+    <span style="font-weight:900;color:#c62828;">${{ item.balance }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+  {% if role == 'admin' %}
+  <!-- ── TABS ── -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('grid')"   id="tabGrid">📊 Grid View — All Students</button>
+    <button class="tab-btn"        onclick="switchTab('month')"  id="tabMonth">📅 By Month</button>
+    <button class="tab-btn"        onclick="switchTab('student')" id="tabStudent">👤 By Student</button>
+  </div>
+
+  <!-- ══════════ TAB 1: GRID VIEW ══════════ -->
+  <div id="tabGridContent">
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        📊 All Students × All Months
+        <input type="text" class="search-input" id="gridSearch" placeholder="🔍 Search student..." oninput="searchGrid(this.value)" style="margin-left:auto;width:220px;">
+        <button class="btn btn-primary no-print" style="padding:8px 14px;font-size:.78rem;" onclick="printPage('Monthly Fees Report')">🖨️ Print</button>
+      </div>
+      <div class="month-grid-wrap" id="printArea">
+        <table class="month-grid" id="gridTable">
+          <thead>
+            <tr>
+              <th class="sticky-col">ID</th>
+              <th class="sticky-col2">Name</th>
+              {% for m in school_months %}
+              <th>
+                <div class="mhdr">
+                  <span class="mhdr-name">{{ m }}</span>
+                  <span class="mhdr-fee">${{ monthly_fee|int }}</span>
+                </div>
+              </th>
+              {% endfor %}
+              <th>Total Paid</th>
+              <th>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for s in students %}
+          {% set sid = s.get('ID','') %}
+          {% set smap = monthly_map.get(sid, {}) %}
+          {% set total_paid_year = smap.values()|sum(attribute='paid') %}
+          {% set total_year = 9 * monthly_fee %}
+          {% set outstanding = total_year - total_paid_year %}
+          <tr data-name="{{ s.get('Name','')|lower }}" data-id="{{ sid|lower }}">
+            <td class="sticky-col"><span class="badge badge-primary">{{ sid }}</span></td>
+            <td class="sticky-col2">
+              <div style="font-weight:700;">{{ s.get('Name','') }}</div>
+              <div style="font-size:.72rem;color:var(--subtext);">{% set mc=s.get('Class','') %}{% if mc=='Xaddaano' %}Xaddaano{% elif mc in ['1','2','3','4','5','6','7','8'] %}Class {{ mc }}{% else %}{{ mc }}{% endif %}</div>
+            </td>
+            {% for m in school_months %}
+            {% set mdata = smap.get(m, {}) %}
+            {% set mpaid = mdata.get('paid', 0)|float %}
+            {% set mbal  = mdata.get('balance', monthly_fee)|float %}
+            <td>
+              {% if mpaid >= monthly_fee %}
+              <div class="mcell mcell-paid">
+                <span class="mcell-icon">✅</span>
+                <span class="mcell-amt green">${{ mpaid|int }}</span>
+                <span class="mcell-bal">Bal: $0</span>
+                {% if role == 'admin' %}
+                <button class="mcell-btn mcell-edit" onclick="openMEdit('{{ sid }}','{{ s.get('Name','') }}','{{ m }}',{{ mpaid }},{{ mbal }})">✏️</button>
+                {% endif %}
+              </div>
+              {% elif mpaid > 0 %}
+              <div class="mcell mcell-part">
+                <span class="mcell-icon">⚠️</span>
+                <span class="mcell-amt amber">${{ mpaid }}</span>
+                <span class="mcell-bal">Bal: ${{ mbal }}</span>
+                {% if role == 'admin' %}
+                <button class="mcell-btn mcell-pay"  onclick="openMPay('{{ sid }}','{{ s.get('Name','') }}','{{ m }}',{{ mbal }},{{ mpaid }})">💰 Pay</button>
+                <button class="mcell-btn mcell-edit" onclick="openMEdit('{{ sid }}','{{ s.get('Name','') }}','{{ m }}',{{ mpaid }},{{ mbal }})">✏️</button>
+                {% endif %}
+              </div>
+              {% else %}
+              <div class="mcell mcell-unpaid">
+                <span class="mcell-icon">❌</span>
+                <span class="mcell-amt grey">$0</span>
+                <span class="mcell-bal">Bal: ${{ monthly_fee|int }}</span>
+                {% if role == 'admin' %}
+                <button class="mcell-btn mcell-pay" onclick="openMPay('{{ sid }}','{{ s.get('Name','') }}','{{ m }}',{{ monthly_fee }},0)">💰 Pay</button>
+                {% endif %}
+              </div>
+              {% endif %}
+            </td>
+            {% endfor %}
+            <td>
+              <div style="font-weight:800;color:{% if total_paid_year>=total_year %}var(--success){% elif total_paid_year>0 %}var(--warning){% else %}var(--error){% endif %};">
+                ${{ "%.0f"|format(total_paid_year) }}
+              </div>
+              <div class="year-bar"><div class="year-fill" style="width:{{ [[(total_paid_year/total_year*100)|round(0),0]|max,100]|min }}%"></div></div>
+              <div style="font-size:.7rem;color:var(--subtext);">of ${{ total_year|int }}</div>
+            </td>
+            <td>
+              <span style="font-weight:800;color:{% if outstanding<=0 %}var(--success){% else %}var(--error){% endif %};">
+                ${{ [outstanding,0]|max|int }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ TAB 2: BY MONTH ══════════ -->
+  <div id="tabMonthContent" style="display:none;">
+    <div class="card">
+      <div class="card-title">📅 Select Month to View / Record Payments</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+        {% for m in school_months %}
+        <button class="btn" id="mSelBtn_{{ m }}"
+          style="padding:10px 20px;font-weight:700;background:#f5f5f5;border:2px solid #e0e0e0;border-radius:12px;font-size:.88rem;cursor:pointer;transition:all .2s;"
+          onclick="selectMonth('{{ m }}')">
+          {{ m }}
+        </button>
+        {% endfor %}
+      </div>
+      <div id="monthStudentList" style="display:none;">
+        <div style="font-weight:700;font-size:1rem;margin-bottom:14px;color:var(--primary);" id="monthListTitle"></div>
+        <div class="table-container">
+          <table><thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="monthStudentBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ TAB 3: BY STUDENT ══════════ -->
+  <div id="tabStudentContent" style="display:none;">
+    <div class="card">
+      <div class="card-title">👤 Select Student to View Year Summary</div>
+      <div style="position:relative;margin-bottom:16px;">
+        <input type="text" class="search-input" id="stuSearch" placeholder="🔍 Search by ID or Name..." oninput="searchStudentList(this.value)" style="width:100%;padding-left:40px;">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);">🔍</span>
+      </div>
+      <div id="stuListWrap" style="max-height:320px;overflow-y:auto;border:1px solid #e8eaf6;border-radius:var(--radius-sm);">
+        {% for s in students %}
+        {% set sid = s.get('ID','') %}
+        {% set smap = monthly_map.get(sid, {}) %}
+        {% set paid_months = smap.values()|selectattr('paid','ge',monthly_fee)|list|length %}
+        <div class="s-item" data-id="{{ sid|lower }}" data-name="{{ s.get('Name','')|lower }}" onclick="openStudentDetail('{{ sid }}','{{ s.get('Name','') }}','{{ s.get('Class','') }}')"
+          style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #f0f4ff;">
+          <div>
+            <span class="badge badge-primary" style="margin-right:8px;">{{ sid }}</span>
+            <strong>{{ s.get('Name','') }}</strong>
+            <span style="color:var(--subtext);font-size:.82rem;margin-left:8px;">{% set mc=s.get('Class','') %}{% if mc=='Xaddaano' %}Xaddaano{% elif mc in ['1','2','3','4','5','6','7','8'] %}Class {{ mc }}{% else %}{{ mc }}{% endif %}</span>
+          </div>
+          <div style="text-align:right;">
+            <span class="sum-chip {% if paid_months==9 %}sum-paid{% elif paid_months>0 %}sum-part{% else %}sum-none{% endif %}">
+              {{ paid_months }}/9 months paid
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <!-- Student Detail Panel -->
+    <div id="stuDetailWrap" style="display:none;">
+      <div class="card">
+        <div class="card-title" id="stuDetailTitle">📋 Year Summary</div>
+        <div id="stuDetailBody"></div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ══════════ STUDENT VIEW ══════════ -->
+  {% for s in students %}
+  {% set sid = s.get('ID','') %}
+  {% set smap = monthly_map.get(sid, {}) %}
+  {% set total_paid_year = smap.values()|sum(attribute='paid') %}
+  {% set total_year = 9 * monthly_fee %}
+  <div class="card">
+    <div class="card-title">📅 Your Payment History — {{ current_year }}–{{ current_year+1 }}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;">
+      <div class="info-card" style="border-top-color:var(--primary);text-align:center;">
+        <div class="info-card-icon">💰</div><div class="info-card-title">TOTAL PAID (YEAR)</div>
+        <div class="info-card-value" style="color:var(--success);">${{ "%.0f"|format(total_paid_year) }}</div>
+      </div>
+      <div class="info-card" style="border-top-color:var(--error);text-align:center;">
+        <div class="info-card-icon">📋</div><div class="info-card-title">OUTSTANDING</div>
+        <div class="info-card-value" style="color:var(--error);">${{ [total_year - total_paid_year, 0]|max|int }}</div>
+      </div>
+      <div class="info-card" style="border-top-color:var(--secondary);text-align:center;">
+        <div class="info-card-icon">✅</div><div class="info-card-title">MONTHS CLEARED</div>
+        <div class="info-card-value">{{ smap.values()|selectattr('paid','ge',monthly_fee)|list|length }}/9</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      {% for m in school_months %}
+      {% set mdata = smap.get(m, {}) %}
+      {% set mpaid = mdata.get('paid', 0)|float %}
+      {% set mbal  = mdata.get('balance', monthly_fee)|float %}
+      <div style="flex:1;min-width:90px;border-radius:12px;padding:12px 10px;text-align:center;
+        background:{% if mpaid>=monthly_fee %}#e8f5e9{% elif mpaid>0 %}#fff8e1{% else %}#ffebee{% endif %};
+        border:1.5px solid {% if mpaid>=monthly_fee %}#a5d6a7{% elif mpaid>0 %}#ffe082{% else %}#ef9a9a{% endif %};">
+        <div style="font-size:1.2rem;">{% if mpaid>=monthly_fee %}✅{% elif mpaid>0 %}⚠️{% else %}❌{% endif %}</div>
+        <div style="font-weight:800;font-size:.9rem;margin:4px 0;">{{ m }}</div>
+        <div style="font-size:.78rem;font-weight:700;color:{% if mpaid>=monthly_fee %}#2e7d32{% elif mpaid>0 %}#e65100{% else %}#c62828{% endif %};">
+          {% if mpaid>=monthly_fee %}Paid ${{ mpaid|int }}{% elif mpaid>0 %}${{ mpaid }} / ${{ monthly_fee|int }}{% else %}Unpaid{% endif %}
+        </div>
+        {% if mbal>0 and mpaid<monthly_fee %}<div style="font-size:.7rem;color:#607d8b;">Bal: ${{ mbal }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  </div>
+</div>
+
+<!-- ══════════ PAY MODAL ══════════ -->
+<div class="modal-overlay" id="mPayModal" style="display:none;">
+  <div class="modal mf-modal">
+    <div class="modal-title">💰 Record Monthly Payment</div>
+    <input type="hidden" id="mpId">
+    <input type="hidden" id="mpMonth">
+    <div class="mf-info-box">
+      <div class="mf-info-row"><span class="mf-lbl">STUDENT</span><span class="mf-val" id="mpName"></span></div>
+      <div class="mf-info-row"><span class="mf-lbl">MONTH</span><span class="mf-val" style="color:var(--primary);" id="mpMonthLabel"></span></div>
+      <div class="mf-info-row"><span class="mf-lbl">ALREADY PAID</span><span class="mf-val" style="color:var(--success);" id="mpAlready"></span></div>
+      <div class="mf-info-row"><span class="mf-lbl">REMAINING</span><span class="mf-val" style="color:var(--error);" id="mpBal"></span></div>
+    </div>
+    <div class="form-group">
+      <label style="font-weight:700;">Amount to Pay ($) — Max: <span id="mpMax" style="color:var(--error);font-weight:800;"></span></label>
+      <input type="number" class="form-control" id="mpAmt" min="0.01" max="25" step="0.01" placeholder="Enter amount" oninput="validateMPay(this)">
+    </div>
+    <div id="mpResult" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-danger"  onclick="closeModal('mPayModal')">✖ Cancel</button>
+      <button class="btn btn-success" id="mpBtn" onclick="submitMPay()">💰 Save Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ EDIT MODAL ══════════ -->
+<div class="modal-overlay" id="mEditModal" style="display:none;">
+  <div class="modal mf-modal">
+    <div class="modal-title">✏️ Edit Monthly Payment</div>
+    <input type="hidden" id="meId">
+    <input type="hidden" id="meMonth">
+    <div class="mf-info-box">
+      <div class="mf-info-row"><span class="mf-lbl">STUDENT</span><span class="mf-val" id="meName"></span></div>
+      <div class="mf-info-row"><span class="mf-lbl">MONTH</span><span class="mf-val" style="color:var(--primary);" id="meMonthLabel"></span></div>
+      <div class="mf-info-row"><span class="mf-lbl">MONTHLY FEE</span><span class="mf-val">$25</span></div>
+    </div>
+    <div class="form-group">
+      <label style="font-weight:700;">Set Amount Paid ($) — 0 to ${{ monthly_fee|int }}</label>
+      <input type="number" class="form-control" id="meAmt" min="0" max="{{ monthly_fee }}" step="0.01" placeholder="0.00" oninput="previewMEdit()">
+    </div>
+    <div style="background:#f5f5f5;border-radius:8px;padding:10px;margin-bottom:14px;display:flex;justify-content:space-between;">
+      <span style="font-size:.82rem;font-weight:600;color:#607d8b;">New Balance:</span>
+      <span style="font-weight:800;color:var(--error);" id="mePreview">$25.00</span>
+    </div>
+    <div id="meResult" style="margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-danger"  onclick="closeModal('mEditModal')">✖ Cancel</button>
+      <button class="btn btn-success" id="meBtn" onclick="submitMEdit()">💾 Save to Sheet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var MFEE = {{ monthly_fee }};
+var MONTHS = {{ school_months | tojson }};
+var ALL_STUDENTS = {{ students | tojson }};
+var MONTHLY_MAP  = {{ monthly_map | tojson }};
+
+/* ── SIDEBAR ── */
+function toggleSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay'),m=window.innerWidth<=768;if(m){s.classList.toggle('mobile-open');if(o)o.classList.toggle('active');}else{s.classList.toggle('collapsed');var c=document.getElementById('mainContent');if(c)c.classList.toggle('expanded');}}
+function closeSidebar(){var s=document.getElementById('sidebar'),o=document.getElementById('sidebarOverlay');if(s)s.classList.remove('mobile-open');if(o)o.classList.remove('active');}
+function openModal(id){var el=document.getElementById(id);if(el){el.style.display='flex';document.body.style.overflow='hidden';}}
+function closeModal(id){var el=document.getElementById(id);if(el){el.style.display='none';document.body.style.overflow='';}}
+document.querySelectorAll('.modal-overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o)closeModal(o.id);});});
+function showAlert(msg,type){var c=document.getElementById('alertContainer');if(!c)return;var el=document.createElement('div');el.className='alert alert-'+(type||'success');el.innerHTML=(type==='error'?'❌':'✅')+' '+msg;c.appendChild(el);setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove();},300);},4500);}
+
+/* ── TABS ── */
+function switchTab(tab){
+  ['grid','month','student'].forEach(function(t){
+    document.getElementById('tab'+cap(t)+'Content').style.display = t===tab?'block':'none';
+    document.getElementById('tab'+cap(t)).classList.toggle('active', t===tab);
+  });
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+/* ── GRID SEARCH ── */
+function searchGrid(q){
+  document.querySelectorAll('#gridTable tbody tr').forEach(function(r){
+    var id=(r.dataset.id||'');var nm=(r.dataset.name||'');
+    r.style.display=(id.includes(q.toLowerCase())||nm.includes(q.toLowerCase()))?'':'none';
+  });
+}
+
+/* ── MONTH TAB ── */
+var curMonth='';
+function selectMonth(m){
+  curMonth = m;
+  MONTHS.forEach(function(mo){
+    var btn=document.getElementById('mSelBtn_'+mo);
+    if(btn){btn.style.background=mo===m?'var(--primary)':'#f5f5f5';btn.style.color=mo===m?'white':'inherit';btn.style.borderColor=mo===m?'var(--primary)':'#e0e0e0';}
+  });
+  renderMonthList(m);
+}
+function renderMonthList(m){
+  var wrap=document.getElementById('monthStudentList');
+  var title=document.getElementById('monthListTitle');
+  var body=document.getElementById('monthStudentBody');
+  title.textContent='💰 '+m+' — All Students';
+  var html='';
+  ALL_STUDENTS.forEach(function(s){
+    var sid=s.ID||s['ID']||'';
+    var mdata=(MONTHLY_MAP[sid]||{})[m]||{};
+    var paid=parseFloat(mdata.paid||0);
+    var bal=parseFloat(mdata.balance!==undefined?mdata.balance:MFEE);
+    var st=paid>=MFEE?'paid':paid>0?'pending':'unpaid';
+    var stBadge=st==='paid'?'<span class="fee-badge fee-paid">✅ Paid</span>':
+                st==='pending'?'<span class="fee-badge fee-pending">⚠️ Pending</span>':
+                '<span class="fee-badge fee-unpaid">❌ Unpaid</span>';
+    var btns='';
+    if(bal>0){btns+='<button class="action-btn btn-pay" style="padding:5px 12px;font-size:.78rem;" onclick="openMPay(\''+sid+'\',\''+s.Name+'\',\''+m+'\','+bal+','+paid+')">💰 Pay</button> ';}
+    btns+='<button class="action-btn btn-edit" style="padding:5px 12px;font-size:.78rem;" onclick="openMEdit(\''+sid+'\',\''+s.Name+'\',\''+m+'\','+paid+','+bal+')">✏️ Edit</button>';
+    html+='<tr><td><span class="badge badge-primary">'+sid+'</span></td><td><strong>'+s.Name+'</strong></td><td>Class '+(s.Class||s['Class']||'')+'</td><td style="font-weight:700;color:var(--success);">$'+paid.toFixed(2)+'</td><td style="font-weight:700;color:var(--error);">$'+bal.toFixed(2)+'</td><td>'+stBadge+'</td><td><div style="display:flex;gap:5px;">'+btns+'</div></td></tr>';
+  });
+  body.innerHTML=html||'<tr><td colspan="7" style="text-align:center;color:var(--subtext);padding:20px;">No students</td></tr>';
+  wrap.style.display='block';
+}
+
+/* ── STUDENT LIST SEARCH ── */
+function searchStudentList(q){
+  document.querySelectorAll('#stuListWrap .s-item').forEach(function(r){
+    var id=(r.dataset.id||'');var nm=(r.dataset.name||'');
+    r.style.display=(id.includes(q.toLowerCase())||nm.includes(q.toLowerCase()))?'':'none';
+  });
+}
+
+/* ── STUDENT DETAIL ── */
+function openStudentDetail(sid, sname, scls){
+  var wrap=document.getElementById('stuDetailWrap');
+  var title=document.getElementById('stuDetailTitle');
+  var body=document.getElementById('stuDetailBody');
+  title.textContent='📋 '+sname+' ('+sid+') — Year Summary';
+  var smap=MONTHLY_MAP[sid]||{};
+  var totalPaid=0;
+  var html='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">';
+  MONTHS.forEach(function(m){
+    var mdata=smap[m]||{};
+    var paid=parseFloat(mdata.paid||0);
+    var bal=parseFloat(mdata.balance!==undefined?mdata.balance:MFEE);
+    totalPaid+=paid;
+    var bg=paid>=MFEE?'#e8f5e9':paid>0?'#fff8e1':'#ffebee';
+    var bc=paid>=MFEE?'#a5d6a7':paid>0?'#ffe082':'#ef9a9a';
+    var icon=paid>=MFEE?'✅':paid>0?'⚠️':'❌';
+    var label=paid>=MFEE?'Paid $'+paid.toFixed(0):paid>0?'$'+paid+' / $'+MFEE:'Unpaid';
+    var clr=paid>=MFEE?'#2e7d32':paid>0?'#e65100':'#c62828';
+    var btns='';
+    if(bal>0) btns+='<button class="mcell-btn mcell-pay" onclick="openMPay(\''+sid+'\',\''+sname+'\',\''+m+'\','+bal+','+paid+')">💰 Pay</button> ';
+    btns+='<button class="mcell-btn mcell-edit" onclick="openMEdit(\''+sid+'\',\''+sname+'\',\''+m+'\','+paid+','+bal+')">✏️</button>';
+    html+='<div style="flex:1;min-width:100px;border-radius:12px;padding:12px 10px;text-align:center;background:'+bg+';border:1.5px solid '+bc+';">';
+    html+='<div style="font-size:1.3rem;">'+icon+'</div>';
+    html+='<div style="font-weight:800;font-size:.9rem;margin:4px 0;">'+m+'</div>';
+    html+='<div style="font-size:.78rem;font-weight:700;color:'+clr+';">'+label+'</div>';
+    if(bal>0&&paid<MFEE) html+='<div style="font-size:.7rem;color:#607d8b;">Bal: $'+bal+'</div>';
+    html+='<div style="margin-top:5px;">'+btns+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  var outstanding=Math.max(0, 9*MFEE - totalPaid);
+  html+='<div style="display:flex;gap:14px;flex-wrap:wrap;">';
+  html+='<div style="background:#e8f5e9;border-radius:10px;padding:12px 18px;flex:1;text-align:center;"><div style="font-size:.75rem;color:#607d8b;font-weight:600;">TOTAL PAID</div><div style="font-weight:800;font-size:1.2rem;color:#2e7d32;">$'+totalPaid.toFixed(0)+'</div></div>';
+  html+='<div style="background:#ffebee;border-radius:10px;padding:12px 18px;flex:1;text-align:center;"><div style="font-size:.75rem;color:#607d8b;font-weight:600;">OUTSTANDING</div><div style="font-weight:800;font-size:1.2rem;color:#c62828;">$'+outstanding.toFixed(0)+'</div></div>';
+  html+='<div style="background:#e3f2fd;border-radius:10px;padding:12px 18px;flex:1;text-align:center;"><div style="font-size:.75rem;color:#607d8b;font-weight:600;">PROGRESS</div><div style="font-weight:800;font-size:1.2rem;color:var(--primary);">'+Math.round(totalPaid/(9*MFEE)*100)+'%</div></div>';
+  html+='</div>';
+  body.innerHTML=html;
+  wrap.style.display='block';
+  wrap.scrollIntoView({behavior:'smooth'});
+}
+
+/* ══════════ PAY MODAL ══════════ */
+var mpCurId='', mpCurMonth='', mpCurBal=0, mpCurPaid=0;
+function openMPay(sid, sname, month, bal, paid){
+  mpCurId=sid; mpCurMonth=month; mpCurBal=parseFloat(bal); mpCurPaid=parseFloat(paid);
+  var maxPay=Math.min(mpCurBal, MFEE);
+  document.getElementById('mpId').value=sid;
+  document.getElementById('mpMonth').value=month;
+  document.getElementById('mpName').textContent=sname;
+  document.getElementById('mpMonthLabel').textContent=month;
+  document.getElementById('mpAlready').textContent='$'+mpCurPaid.toFixed(2);
+  document.getElementById('mpBal').textContent='$'+mpCurBal.toFixed(2);
+  document.getElementById('mpMax').textContent='$'+maxPay.toFixed(2);
+  document.getElementById('mpAmt').value='';
+  document.getElementById('mpAmt').max=maxPay;
+  document.getElementById('mpResult').innerHTML='';
+  document.getElementById('mpBtn').disabled=false;
+  openModal('mPayModal');
+}
+function validateMPay(inp){
+  var v=parseFloat(inp.value);var res=document.getElementById('mpResult');
+  if(isNaN(v)||v<=0){res.innerHTML='<div class="alert alert-error">❌ Enter valid amount!</div>';inp.style.borderColor='var(--error)';return;}
+  if(v>MFEE){res.innerHTML='<div class="alert alert-error">❌ Max $'+MFEE.toFixed(0)+' per month!</div>';inp.style.borderColor='var(--error)';return;}
+  if(v>mpCurBal){res.innerHTML='<div class="alert alert-error">❌ Exceeds balance $'+mpCurBal.toFixed(2)+'!</div>';inp.style.borderColor='var(--error)';return;}
+  inp.style.borderColor='var(--success)';
+  res.innerHTML='<div class="alert alert-success">✅ After payment — Balance: $'+(mpCurBal-v).toFixed(2)+'</div>';
+}
+function submitMPay(){
+  var amt=parseFloat(document.getElementById('mpAmt').value);
+  var res=document.getElementById('mpResult');
+  if(isNaN(amt)||amt<=0){res.innerHTML='<div class="alert alert-error">❌ Enter valid amount!</div>';return;}
+  if(amt>MFEE){res.innerHTML='<div class="alert alert-error">❌ Max $'+MFEE.toFixed(0)+'!</div>';return;}
+  if(amt>mpCurBal){res.innerHTML='<div class="alert alert-error">❌ Exceeds balance!</div>';return;}
+  var btn=document.getElementById('mpBtn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  fetch('/pay_monthly',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({student_id:mpCurId,month:mpCurMonth,amount:amt})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    btn.innerHTML='💰 Save Payment';btn.disabled=false;
+    if(d.success){
+      res.innerHTML='<div class="alert alert-success">✅ '+d.message+'</div>';
+      showAlert(d.message,'success');
+      // Update local map
+      if(!MONTHLY_MAP[mpCurId]) MONTHLY_MAP[mpCurId]={};
+      MONTHLY_MAP[mpCurId][mpCurMonth]={paid:d.new_paid,balance:d.new_balance};
+      closeModal('mPayModal');
+      if(d.receipt){
+        showReceipt(d.receipt, function(){ location.reload(); });
+      } else {
+        setTimeout(function(){location.reload();},1500);
+      }
+    } else {
+      res.innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';
+      showAlert(d.message,'error');
+    }
+  }).catch(function(){btn.innerHTML='💰 Save Payment';btn.disabled=false;res.innerHTML='<div class="alert alert-error">❌ Connection error!</div>';});
+}
+
+/* ══════════ EDIT MODAL ══════════ */
+function openMEdit(sid, sname, month, paid, bal){
+  document.getElementById('meId').value=sid;
+  document.getElementById('meMonth').value=month;
+  document.getElementById('meName').textContent=sname;
+  document.getElementById('meMonthLabel').textContent=month;
+  document.getElementById('meAmt').value=parseFloat(paid).toFixed(2);
+  document.getElementById('meResult').innerHTML='';
+  previewMEdit();
+  openModal('mEditModal');
+}
+function previewMEdit(){
+  var v=parseFloat(document.getElementById('meAmt').value)||0;
+  var bal=Math.max(0,MFEE-v);
+  document.getElementById('mePreview').textContent='$'+bal.toFixed(2);
+}
+function submitMEdit(){
+  var sid=document.getElementById('meId').value;
+  var month=document.getElementById('meMonth').value;
+  var paid=parseFloat(document.getElementById('meAmt').value);
+  var res=document.getElementById('meResult');
+  if(isNaN(paid)||paid<0){res.innerHTML='<div class="alert alert-error">❌ Invalid amount!</div>';return;}
+  if(paid>MFEE){res.innerHTML='<div class="alert alert-error">❌ Max $'+MFEE.toFixed(0)+'!</div>';return;}
+  var btn=document.getElementById('meBtn');btn.innerHTML='<span class="spinner"></span>';btn.disabled=true;
+  fetch('/edit_monthly',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({student_id:sid,month:month,amount_paid:paid})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    btn.innerHTML='💾 Save to Sheet';btn.disabled=false;
+    if(d.success){
+      res.innerHTML='<div class="alert alert-success">✅ '+d.message+'</div>';
+      showAlert(d.message,'success');
+      if(!MONTHLY_MAP[sid]) MONTHLY_MAP[sid]={};
+      MONTHLY_MAP[sid][month]={paid:d.new_paid,balance:d.new_balance};
+      setTimeout(function(){closeModal('mEditModal');location.reload();},1500);
+    } else {
+      res.innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';
+      showAlert(d.message,'error');
+    }
+  }).catch(function(){btn.innerHTML='💾 Save to Sheet';btn.disabled=false;res.innerHTML='<div class="alert alert-error">❌ Connection error!</div>';});
+}
+</script>
+</body>
+</html>

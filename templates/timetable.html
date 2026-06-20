@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Timetable - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon"       href="{{ url_for('static',filename='images/logo.png') }}">
+<link rel="manifest"   href="/manifest.json">
+<meta name="theme-color" content="#1565C0">
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+<style>
+/* ── TIMETABLE STYLES ── */
+.tt-card{background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px;}
+.tt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tt-table{width:100%;border-collapse:collapse;min-width:480px;}
+.tt-table th{
+  background:linear-gradient(135deg,var(--brand-start),var(--brand-end));
+  color:white;padding:10px 8px;font-size:.78rem;font-weight:700;
+  text-align:center;white-space:nowrap;
+}
+.tt-table th.time-col{width:80px;min-width:80px;}
+.tt-table td{
+  padding:0;border:1px solid #eef0f8;
+  text-align:center;vertical-align:middle;
+  min-width:80px;
+}
+/* Time label column */
+.tt-time{
+  background:#f5f7ff;font-size:.72rem;font-weight:700;
+  color:var(--subtext);padding:6px 8px;white-space:nowrap;
+  border-right:2px solid #e0e6ff;
+}
+/* Break row */
+.tt-break td{background:linear-gradient(90deg,#fff8e1,#fff3cd);height:36px;}
+.tt-break .tt-time{background:#fff8e1;color:#f57c00;}
+.tt-break-label{font-size:.72rem;font-weight:700;color:#f57c00;letter-spacing:.3px;}
+
+/* Subject cell */
+.tt-cell{
+  position:relative;height:52px;cursor:default;
+  transition:background .15s;
+}
+.tt-cell:hover{background:#f0f4ff;}
+.tt-subject{
+  font-size:.76rem;font-weight:600;
+  color:var(--text);padding:4px 6px;line-height:1.3;
+}
+.tt-empty{font-size:1.1rem;color:#cfd8dc;}
+
+/* Admin editable cell */
+.tt-cell.editable{cursor:pointer;}
+.tt-cell.editable:hover{background:#e8f0fe;}
+.tt-cell.editable:hover .tt-edit-hint{opacity:1;}
+.tt-edit-hint{
+  position:absolute;top:2px;right:3px;
+  font-size:.58rem;color:#90a4ae;opacity:0;
+  transition:opacity .15s;
+}
+
+/* Subject colors */
+.sub-color-0{background:#e8f5e9!important;}.sub-color-0 .tt-subject{color:#2e7d32;}
+.sub-color-1{background:#e3f2fd!important;}.sub-color-1 .tt-subject{color:#1565c0;}
+.sub-color-2{background:#fce4ec!important;}.sub-color-2 .tt-subject{color:#c2185b;}
+.sub-color-3{background:#fff3e0!important;}.sub-color-3 .tt-subject{color:#e65100;}
+.sub-color-4{background:#f3e5f5!important;}.sub-color-4 .tt-subject{color:#7b1fa2;}
+.sub-color-5{background:#e0f2f1!important;}.sub-color-5 .tt-subject{color:#00695c;}
+.sub-color-6{background:#fafafa!important;}.sub-color-6 .tt-subject{color:#455a64;}
+.sub-color-7{background:#fff8e1!important;}.sub-color-7 .tt-subject{color:#f57f17;}
+.sub-color-8{background:#e8eaf6!important;}.sub-color-8 .tt-subject{color:#283593;}
+.sub-color-9{background:#fbe9e7!important;}.sub-color-9 .tt-subject{color:#bf360c;}
+
+/* Class selector (admin/teacher) */
+.class-selector{
+  display:flex;gap:8px;flex-wrap:wrap;
+  justify-content:center;margin-bottom:16px;
+}
+.class-btn{
+  padding:8px 16px;border-radius:20px;border:2px solid #e0e6ff;
+  background:white;font-size:.82rem;font-weight:600;
+  cursor:pointer;transition:all .15s;color:var(--subtext);
+  min-height:var(--touch);-webkit-tap-highlight-color:transparent;
+}
+.class-btn:hover{border-color:var(--primary);color:var(--primary);}
+.class-btn.active{background:var(--brand-end);border-color:var(--brand-end);color:white;}
+
+/* Legend */
+.tt-legend{
+  display:flex;flex-wrap:wrap;gap:6px;
+  justify-content:center;padding:10px 14px;
+  border-top:1px solid #f0f4ff;background:#fafbff;
+}
+.tt-legend-item{
+  display:flex;align-items:center;gap:5px;
+  font-size:.72rem;font-weight:600;color:var(--text);
+  padding:3px 8px;border-radius:8px;
+}
+
+/* Edit modal subject grid */
+.subj-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:8px;margin-bottom:16px;
+}
+.subj-pick{
+  padding:10px 8px;border-radius:10px;border:2px solid #e0e6ff;
+  background:white;font-size:.82rem;font-weight:600;cursor:pointer;
+  text-align:center;transition:all .15s;color:var(--text);
+  min-height:var(--touch);-webkit-tap-highlight-color:transparent;
+}
+.subj-pick:hover{border-color:var(--primary);color:var(--primary);}
+.subj-pick.selected{background:var(--brand-end);border-color:var(--brand-end);color:white;}
+
+/* Loading skeleton for table */
+.tt-loading{padding:40px;text-align:center;color:var(--subtext);font-size:.88rem;}
+
+@media(max-width:480px){
+  .tt-table{min-width:400px;}
+  .tt-table th,.tt-time{font-size:.68rem;padding:7px 5px;}
+  .tt-subject{font-size:.7rem;}
+  .tt-cell{height:46px;}
+}
+</style>
+</head>
+<body class="dashboard-body">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="{{ url_for('static',filename='images/logo.png') }}" alt="Logo" class="sidebar-logo">
+    <span class="sidebar-title">School System</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}"    class="nav-item"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+    <a href="{{ url_for('grades') }}"       class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+    {% if role in ['admin','fee'] %}
+    {% if role in ['admin','fee'] %}
+    <a href="{{ url_for('fees') }}"         class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+    <a href="{{ url_for('monthly_fees') }}" class="nav-item"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+    {% endif %}
+    {% endif %}
+    {% if role in ['admin','attendance','teacher'] %}
+    <a href="{{ url_for('attendance') }}"   class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+    {% endif %}
+    <a href="{{ url_for('votes') }}"        class="nav-item"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+    <a href="{{ url_for('announcement') }}" class="nav-item"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+    {% if role != 'teacher' %}
+    <a href="{{ url_for('id_cards') }}"     class="nav-item"><span class="nav-icon">🪪</span><span class="nav-text">{% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}</span></a>
+    {% endif %}
+    <a href="{{ url_for('timetable') }}"    class="nav-item active"><span class="nav-icon">📅</span><span class="nav-text">Timetable</span></a>
+  </nav>
+  <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+    <div class="theme-toggle-label"><span id="themeIcon">🌙</span><span>Dark Mode</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="theme-toggle notif-toggle" id="notifToggle" onclick="toggleNotifications()">
+    <div class="theme-toggle-label"><span class="notif-icon">🔕</span><span>Notifications</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="sidebar-logout">
+    <a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+  </div>
+</div>
+
+<!-- Navbar -->
+<div class="main-content" id="mainContent">
+<div class="navbar">
+  <div class="navbar-left">
+    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <span class="navbar-title">📅 Timetable</span>
+  </div>
+  <div class="navbar-right">
+    <div class="user-badge"><span class="ub-icon">👤</span><span class="ub-name">{{ name|firstname }}</span> <span style="color:var(--secondary);font-size:.78rem;">({{ role|title }})</span></div>
+  </div>
+</div>
+<div class="page-content" id="alertContainer">
+
+<!-- Hero Banner -->
+<div class="welcome-card" style="margin-bottom:16px;">
+  <h2>📅 Weekly Timetable</h2>
+  <p>School Year {{ school_year }} — 7:30 AM to 12:00 PM</p>
+</div>
+
+{% if role == 'student' %}
+<!-- ══════ STUDENT VIEW ══════ -->
+<div class="card" style="margin-bottom:8px;padding:10px 14px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <span class="card-title" style="margin:0;">
+      {% if student_class == 'Xaddaano' %}Xaddaano
+      {% elif student_class in ['1','2','3','4','5','6','7','8'] %}Class {{ student_class }}
+      {% else %}{{ student_class }}{% endif %}
+    </span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:.76rem;color:var(--subtext);">6 periods/day · Thu: 4 periods</span>
+      <button class="btn btn-primary no-print" style="padding:8px 14px;font-size:.78rem;" onclick="printPage('My Timetable')">🖨️ Print</button>
+    </div>
+  </div>
+</div>
+<div class="tt-card">
+  <div class="tt-wrap" id="printArea">
+    <div id="ttStudentWrap"><div class="tt-loading">Loading timetable...</div></div>
+  </div>
+  <div class="tt-legend" id="ttLegend"></div>
+</div>
+
+{% else %}
+<!-- ══════ ADMIN / TEACHER VIEW ══════ -->
+<div class="card" style="margin-bottom:14px;padding:14px 16px;">
+  <div class="card-title" style="margin-bottom:10px;">Select Class</div>
+  <div class="class-selector">
+    {% for cls in classes %}
+    <button class="class-btn" onclick="loadClass('{{ cls }}')">
+      {% if cls in ['1','2','3','4','5','6','7','8'] %}Class {{ cls }}
+      {% else %}{{ cls }}{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="tt-card" id="ttCard" style="display:none;">
+  <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #f0f4ff;">
+    <div class="card-title" style="margin:0;" id="ttCardTitle">—</div>
+    {% if role == 'admin' %}
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary no-print" style="padding:8px 14px;font-size:.78rem;" onclick="printPage('Timetable')">🖨️ Print</button>
+      <button class="btn btn-danger  no-print" style="padding:8px 14px;font-size:.78rem;" onclick="clearClass()">🗑️ Clear</button>
+    </div>
+    {% endif %}
+  </div>
+  <div class="tt-wrap" id="printArea">
+    <div class="tt-loading" id="ttLoading">Select a class to view timetable</div>
+    <div id="ttTableWrap"></div>
+  </div>
+  <div class="tt-legend" id="ttLegend"></div>
+</div>
+{% endif %}
+
+</div><!-- /page-content -->
+</div><!-- /main-content -->
+
+<!-- ── EDIT CELL MODAL (admin only) ── -->
+{% if role == 'admin' %}
+<div class="modal-overlay" id="editCellModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-title">✏️ Set Subject</div>
+    <div id="editCellInfo" style="font-size:.82rem;color:var(--subtext);margin-bottom:14px;"></div>
+    <div class="subj-grid" id="subjGrid"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;" onclick="saveCell()">💾 Save</button>
+      <button class="btn btn-danger"  style="flex:1;" onclick="saveCell('')">🗑️ Clear</button>
+      <button class="btn"            style="flex:1;background:#f5f5f5;color:var(--text);" onclick="closeModal('editCellModal')">✖ Cancel</button>
+    </div>
+    <div id="editCellResult" style="margin-top:10px;"></div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+var ROLE     = '{{ role }}';
+var SUBJECTS = {{ subjects|tojson }};
+var CLASSES  = {{ classes|tojson }};
+var DAYS     = {{ days|tojson }};
+var REGULAR_SLOTS  = {{ regular_slots|tojson }};
+var THURSDAY_SLOTS = {{ thursday_slots|tojson }};
+
+/* Subject → consistent color index */
+var SUB_COLOR = {};
+function subColor(s){
+  if(!s) return -1;
+  if(SUB_COLOR[s] === undefined) SUB_COLOR[s] = Object.keys(SUB_COLOR).length % 10;
+  return SUB_COLOR[s];
+}
+
+/* ── Build HTML table from timetable data ── */
+function buildTable(tt, cls, editable){
+  // Assign colors first (consistent order = subjects dict order)
+  var allSubjs = new Set();
+  DAYS.forEach(function(d){
+    var slots = d === 'Thursday' ? THURSDAY_SLOTS : REGULAR_SLOTS;
+    slots.forEach(function(s){
+      if(!s.is_break){
+        var sub = (tt[d] && tt[d][s.period]) || '';
+        if(sub) allSubjs.add(sub);
+      }
+    });
+  });
+  allSubjs.forEach(function(s){ subColor(s); });
+
+  var html = '<table class="tt-table"><thead><tr>';
+  html += '<th class="time-col">Time</th>';
+  DAYS.forEach(function(d){
+    html += '<th>' + d.slice(0,3) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  // Use regular slots as row template (max rows = regular)
+  REGULAR_SLOTS.forEach(function(slot){
+    if(slot.is_break){
+      html += '<tr class="tt-break">';
+      html += '<td class="tt-time">'+slot.start+'–'+slot.end+'</td>';
+      DAYS.forEach(function(d){
+        if(d === 'Thursday'){
+          html += '<td style="background:#f5f5f5;"></td>';
+        } else {
+          html += '<td><span class="tt-break-label">'+slot.label+'</span></td>';
+        }
+      });
+      html += '</tr>';
+      return;
+    }
+
+    html += '<tr>';
+    html += '<td class="tt-time">'+slot.start+'<br>'+slot.end+'</td>';
+    DAYS.forEach(function(d){
+      var thuSlots = THURSDAY_SLOTS.map(function(s){return s.period;});
+      var isThursday = (d === 'Thursday');
+      var hasPeriod  = !isThursday || thuSlots.indexOf(slot.period) !== -1;
+      if(!hasPeriod){
+        // Thursday doesn't have this period
+        html += '<td style="background:#f5f7ff;"></td>';
+        return;
+      }
+      var sub = (tt[d] && tt[d][slot.period]) || '';
+      var col = sub ? 'sub-color-'+subColor(sub) : '';
+      var edit_attr = editable
+        ? ' onclick="openEditCell(\''+cls+'\',\''+d+'\','+slot.period+',\''+sub.replace(/'/g,"\\'")+'\')"'
+        : '';
+      html += '<td class="tt-cell '+col+(editable?' editable':'')+'"'+edit_attr+'>';
+      if(sub){
+        html += '<div class="tt-subject">'+sub+'</div>';
+        if(editable) html += '<div class="tt-edit-hint">✏️</div>';
+      } else {
+        html += '<div class="tt-empty">'+(editable ? '+' : '—')+'</div>';
+      }
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+/* ── Build legend ── */
+function buildLegend(tt){
+  var seen = {};
+  DAYS.forEach(function(d){
+    if(tt[d]) Object.values(tt[d]).forEach(function(s){ if(s) seen[s]=1; });
+  });
+  var html = '';
+  Object.keys(seen).forEach(function(s){
+    html += '<div class="tt-legend-item sub-color-'+subColor(s)+'">'+s+'</div>';
+  });
+  document.getElementById('ttLegend').innerHTML = html || '<span style="color:var(--subtext);font-size:.76rem;">No subjects added yet</span>';
+}
+
+{% if role == 'student' %}
+/* Student — render table client side for colors */
+(function(){
+  var tt  = {{ timetable|tojson }};
+  var cls = '{{ student_class }}';
+  var wrap = document.getElementById('ttStudentWrap');
+  if(wrap){
+    if(Object.keys(tt).length === 0){
+      wrap.innerHTML = '<div class="tt-loading">No timetable set for your class yet.</div>';
+    } else {
+      wrap.innerHTML = buildTable(tt, cls, false);
+    }
+    buildLegend(tt);
+  }
+})();
+
+{% else %}
+/* Admin/Teacher — load on demand */
+var _currentClass = '';
+var _currentTT    = {};
+
+function loadClass(cls){
+  _currentClass = cls;
+  /* Update active button */
+  document.querySelectorAll('.class-btn').forEach(function(b){
+    b.classList.toggle('active', b.textContent.trim() === (
+      ['1','2','3','4','5','6','7','8'].indexOf(cls) !== -1 ? 'Class '+cls : cls
+    ));
+  });
+
+  var card = document.getElementById('ttCard');
+  var title = document.getElementById('ttCardTitle');
+  var wrap  = document.getElementById('ttTableWrap');
+  var loading = document.getElementById('ttLoading');
+
+  card.style.display = 'block';
+  if(loading) loading.style.display = 'block';
+  if(wrap) wrap.innerHTML = '';
+  title.textContent = (['1','2','3','4','5','6','7','8'].indexOf(cls) !== -1 ? 'Class ' : '') + cls;
+
+  fetch('/get_timetable?class='+encodeURIComponent(cls), {credentials:'same-origin'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(loading) loading.style.display = 'none';
+      if(!d.success){ wrap.innerHTML = '<div style="padding:20px;color:var(--error);">Error loading timetable</div>'; return; }
+      _currentTT = d.timetable || {};
+      wrap.innerHTML = buildTable(_currentTT, cls, ROLE === 'admin');
+      buildLegend(_currentTT);
+    })
+    .catch(function(){
+      if(loading) loading.style.display = 'none';
+      wrap.innerHTML = '<div style="padding:20px;color:var(--error);">Connection failed</div>';
+    });
+}
+
+/* ── Edit cell (admin only) ── */
+var _editCls = '', _editDay = '', _editPeriod = '', _editSub = '';
+function openEditCell(cls, day, period, sub){
+  _editCls    = cls;
+  _editDay    = day;
+  _editPeriod = period;
+  _editSub    = sub;
+
+  document.getElementById('editCellInfo').textContent =
+    cls + ' — ' + day + ', Period ' + period + ' (Current: ' + (sub || 'Empty') + ')';
+
+  /* Build subject picker */
+  var grid = document.getElementById('subjGrid');
+  grid.innerHTML = '';
+  SUBJECTS.forEach(function(s){
+    var btn = document.createElement('button');
+    btn.className = 'subj-pick' + (s === sub ? ' selected' : '');
+    btn.textContent = s;
+    btn.onclick = function(){
+      document.querySelectorAll('.subj-pick').forEach(function(b){ b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      _editSub = s;
+    };
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('editCellResult').innerHTML = '';
+  openModal('editCellModal');
+}
+
+function saveCell(subjectOverride){
+  var sub = subjectOverride !== undefined ? subjectOverride : _editSub;
+  var res = document.getElementById('editCellResult');
+  res.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;border-top-color:var(--primary);border-color:rgba(21,101,192,.2);"></span> Saving...';
+
+  fetch('/save_timetable_cell', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'same-origin',
+    body: JSON.stringify({class:_editCls, day:_editDay, period:_editPeriod, subject:sub})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.success){
+      res.innerHTML = '<span style="color:var(--success);">✅ Saved!</span>';
+      /* Update local state */
+      if(!_currentTT[_editDay]) _currentTT[_editDay] = {};
+      if(sub) _currentTT[_editDay][_editPeriod] = sub;
+      else    delete _currentTT[_editDay][_editPeriod];
+      /* Re-render table */
+      var wrap = document.getElementById('ttTableWrap');
+      wrap.innerHTML = buildTable(_currentTT, _currentClass, true);
+      buildLegend(_currentTT);
+      setTimeout(function(){ closeModal('editCellModal'); }, 700);
+      toast('Saved: ' + (_editDay) + ' P'+ _editPeriod + ' → ' + (sub||'Cleared'), 'success');
+    } else {
+      res.innerHTML = '<span style="color:var(--error);">❌ '+d.message+'</span>';
+    }
+  })
+  .catch(function(){
+    res.innerHTML = '<span style="color:var(--error);">❌ Connection failed</span>';
+  });
+}
+
+function clearClass(){
+  if(!_currentClass){ toast('Select a class first','warning'); return; }
+  if(!confirm('Clear entire timetable for ' + _currentClass + '?')) return;
+  fetch('/clear_timetable', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'same-origin',
+    body: JSON.stringify({class: _currentClass})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.success){
+      _currentTT = {};
+      var wrap = document.getElementById('ttTableWrap');
+      wrap.innerHTML = buildTable({}, _currentClass, true);
+      buildLegend({});
+      toast('Timetable cleared for ' + _currentClass, 'success');
+    } else {
+      toast(d.message, 'error');
+    }
+  })
+  .catch(function(){ toast('Connection failed','error'); });
+}
+{% endif %}
+</script>
+</body>
+</html>

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard - School System</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+<link rel="icon" href="{{ url_for('static',filename='images/logo.png') }}">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1565C0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="{{ url_for('static',filename='js/main.js') }}"></script>
+<style>
+@keyframes slideUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pop{0%{transform:scale(.7);opacity:0;}80%{transform:scale(1.08);}100%{transform:scale(1);opacity:1;}}
+@keyframes gradShift{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+@keyframes barIn{from{width:0}to{width:var(--w)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HERO */
+.hero{background:linear-gradient(145deg,#0a1628 0%,#0d47a1 40%,#00695c 100%);background-size:200% 200%;animation:gradShift 10s ease infinite;border-radius:22px;padding:22px 20px;color:white;margin-bottom:18px;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(13,71,161,.4);text-align:center;}
+.hero::before{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08),transparent 70%);}
+.hero::after{content:'';position:absolute;bottom:-60px;left:20%;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(0,105,92,.35),transparent 70%);}
+
+/* QUICK BUTTONS */
+.qbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:16px 10px;border-radius:18px;border:none;cursor:pointer;transition:all .25s cubic-bezier(.34,1.56,.64,1);font-family:inherit;text-decoration:none;box-shadow:0 4px 18px rgba(0,0,0,.12);animation:slideUp .35s ease both;position:relative;overflow:hidden;min-height:92px;}
+.qbtn:hover{transform:translateY(-4px) scale(1.03);box-shadow:0 10px 30px rgba(0,0,0,.2);}
+.qbtn:active{transform:translateY(-1px) scale(.98);}
+.qbtn-icon{font-size:1.8rem;line-height:1;}
+.qbtn-label{font-size:.74rem;font-weight:800;letter-spacing:.4px;text-align:center;line-height:1.2;}
+.qbtn-sub{font-size:.63rem;opacity:.8;font-weight:600;text-align:center;}
+.qb-blue{background:linear-gradient(145deg,#1565c0,#1976d2);color:white;box-shadow:0 5px 20px rgba(21,101,192,.4);}
+.qb-green{background:linear-gradient(145deg,#1b5e20,#2e7d32);color:white;box-shadow:0 5px 20px rgba(46,125,50,.38);}
+.qb-teal{background:linear-gradient(145deg,#00695c,#00897b);color:white;box-shadow:0 5px 20px rgba(0,137,123,.38);}
+.qb-orange{background:linear-gradient(145deg,#e65100,#f57c00);color:white;box-shadow:0 5px 20px rgba(230,81,0,.35);}
+.qb-purple{background:linear-gradient(145deg,#4a148c,#6a1b9a);color:white;box-shadow:0 5px 20px rgba(74,20,140,.35);}
+.qb-red{background:linear-gradient(145deg,#b71c1c,#c62828);color:white;box-shadow:0 5px 20px rgba(183,28,28,.35);}
+.qb-gold{background:linear-gradient(145deg,#e65100,#f9a825);color:white;box-shadow:0 5px 20px rgba(249,168,37,.35);}
+.qb-navy{background:linear-gradient(145deg,#1a237e,#283593);color:white;box-shadow:0 5px 20px rgba(26,35,126,.38);}
+.qb-dark{background:linear-gradient(145deg,#212121,#424242);color:white;box-shadow:0 5px 20px rgba(0,0,0,.3);}
+
+/* GRID */
+.qgrid{display:grid;gap:10px;}
+.qgrid-4{grid-template-columns:repeat(4,1fr);}
+.qgrid-3{grid-template-columns:repeat(3,1fr);}
+.qgrid-2{grid-template-columns:repeat(2,1fr);}
+
+/* STAT CARDS */
+.scard{background:white;border-radius:16px;padding:16px 14px;box-shadow:0 3px 16px rgba(0,0,0,.08);border:1px solid #f0f4ff;animation:slideUp .3s ease both;transition:all .2s;cursor:pointer;text-align:center;width:100%;}
+.scard:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.14);}
+
+/* SECTION TITLE */
+.sec-title{font-size:.7rem;font-weight:800;color:#78909c;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.sec-title::after{content:'';}
+
+/* PROMOTE PREVIEW TABLE */
+.prev-tbl{width:100%;border-collapse:collapse;font-size:.8rem;}
+.prev-tbl th{background:linear-gradient(135deg,#1a237e,#1565c0);color:white;padding:9px 10px;font-size:.72rem;font-weight:700;white-space:nowrap;}
+.prev-tbl td{padding:9px 10px;border-bottom:1px solid #f0f4ff;vertical-align:middle;}
+.prev-tbl tr:hover td{background:#f8f9ff;}
+
+/* ACTION CHIPS */
+.ac-promote{background:#e8f5e9;color:#1b5e20;border:1.5px solid #a5d6a7;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700;}
+.ac-fail{background:#ffebee;color:#b71c1c;border:1.5px solid #ef9a9a;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700;}
+.ac-graduate{background:#fff9e6;color:#f57f17;border:1.5px solid #ffe082;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700;}
+
+/* STUDENT HERO */
+.stu-hero{background:linear-gradient(145deg,#0a1628,#0d47a1 50%,#00695c);border-radius:22px;padding:22px;color:white;margin-bottom:16px;box-shadow:0 10px 36px rgba(13,71,161,.38);position:relative;overflow:hidden;animation:slideUp .4s ease both;}
+.stu-hero::before{content:'🏫';position:absolute;right:-10px;bottom:-20px;font-size:7rem;opacity:.06;}
+.fee-mini{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px);border-radius:14px;padding:12px 15px;}
+
+/* ATT MODAL CARDS */
+.att-subj-card{background:white;border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:4px solid #bbb;box-shadow:0 2px 10px rgba(0,0,0,.07);transition:transform .15s;}
+.att-subj-card:hover{transform:translateX(3px);}
+.att-bar{height:6px;background:#e8eaf6;border-radius:3px;margin-top:7px;overflow:hidden;}
+.att-bar-fill{height:100%;border-radius:3px;animation:barIn .8s ease both;}
+
+@media(max-width:640px){
+  .qgrid-4{grid-template-columns:repeat(2,1fr);}
+  .qgrid-3{grid-template-columns:repeat(2,1fr);}
+  .qbtn{padding:14px 8px;min-height:82px;}
+  .qbtn-icon{font-size:1.55rem;}
+  .prev-tbl{font-size:.74rem;}
+  .prev-tbl th,.prev-tbl td{padding:7px 7px;}
+}
+</style>
+</head>
+<body class="dashboard-body">
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="{{ url_for('static',filename='images/logo.png') }}" alt="Logo" class="sidebar-logo">
+    <span class="sidebar-title">School System</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}"    class="nav-item active"><span class="nav-icon">🏠</span><span class="nav-text">Home</span></a>
+    <a href="{{ url_for('grades') }}"       class="nav-item"><span class="nav-icon">📊</span><span class="nav-text">Examinations</span></a>
+    {% if role in ['admin','fee'] %}
+    <a href="{{ url_for('fees') }}"         class="nav-item"><span class="nav-icon">💰</span><span class="nav-text">Fees</span></a>
+    <a href="{{ url_for('monthly_fees') }}" class="nav-item"><span class="nav-icon">🗓️</span><span class="nav-text">Monthly Fees</span></a>
+    {% endif %}
+    {% if role in ['admin','attendance','teacher'] %}
+    <a href="{{ url_for('attendance') }}"   class="nav-item"><span class="nav-icon">📋</span><span class="nav-text">Attendance</span></a>
+    {% endif %}
+    <a href="{{ url_for('votes') }}"        class="nav-item"><span class="nav-icon">🗳️</span><span class="nav-text">Vote</span></a>
+    <a href="{{ url_for('announcement') }}" class="nav-item"><span class="nav-icon">📢</span><span class="nav-text">Announcement</span></a>
+    {% if role != 'teacher' %}
+    <a href="{{ url_for('id_cards') }}"     class="nav-item"><span class="nav-icon">🪪</span><span class="nav-text">{% if role=='student' %}Your ID Card{% else %}ID Cards{% endif %}</span></a>
+    {% endif %}
+    <a href="{{ url_for('timetable') }}"    class="nav-item"><span class="nav-icon">📅</span><span class="nav-text">Timetable</span></a>
+  </nav>
+  <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+    <div class="theme-toggle-label"><span id="themeIcon">🌙</span><span>Dark Mode</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="theme-toggle notif-toggle" id="notifToggle" onclick="toggleNotifications()">
+    <div class="theme-toggle-label"><span class="notif-icon">🔕</span><span>Notifications</span></div>
+    <div class="theme-toggle-switch"></div>
+  </div>
+  <div class="sidebar-logout">
+    <a href="{{ url_for('logout') }}" class="logout-btn"><span>🚪</span><span class="nav-text">Logout</span></a>
+  </div>
+</div>
+
+<div class="main-content" id="mainContent">
+  <div class="navbar">
+    <div class="navbar-left">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <span class="navbar-title">🏫 School System</span>
+    </div>
+    <div class="navbar-right">
+      <div class="user-badge"><span class="ub-icon">👤</span><span class="ub-name">{{ name|firstname }}</span> <span style="color:var(--secondary);font-size:.78rem;">({{ role|title }})</span></div>
+    </div>
+  </div>
+  <div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:340px;width:90%;"></div>
+  <div class="page-content">
+
+{# ══════════ ADMIN ══════════ #}
+{% if role == 'admin' %}
+
+<div class="hero">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;">
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.65rem;flex-shrink:0;border:2px solid rgba(255,255,255,.25);">👑</div>
+    <div>
+      <div style="font-size:1.1rem;font-weight:900;letter-spacing:.3px;">Welcome, Admin 👋</div>
+      <div style="font-size:.78rem;opacity:.8;margin-top:3px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <span id="currentDate"></span>
+        <span style="background:rgba(255,255,255,.18);padding:2px 10px;border-radius:10px;font-weight:700;">📅 {{ school_year }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="sec-title">📊 Overview</div>
+<div style="display:flex;gap:12px;margin-bottom:18px;justify-content:center;flex-wrap:wrap;width:100%;">
+  <div class="scard" onclick="openStudentsModal()" style="animation-delay:.05s;width:140px;flex:0 0 140px;">
+    <div style="font-size:1.5rem;margin-bottom:6px;">👨‍🎓</div>
+    <div style="font-size:1.5rem;font-weight:900;color:#1565c0;line-height:1;" id="totalStudentsNum">{{ total_students }}</div>
+    <div style="font-size:.68rem;color:#78909c;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:4px;">Students</div>
+    <div style="font-size:.66rem;color:#1565c0;font-weight:600;margin-top:5px;">Tap to manage →</div>
+  </div>
+  <div class="scard" onclick="window.location='/fees'" style="animation-delay:.1s;width:140px;flex:0 0 140px;">
+    <div style="font-size:1.5rem;margin-bottom:6px;">💰</div>
+    <div style="font-size:1.5rem;font-weight:900;color:#2e7d32;line-height:1;">${{ total_collected }}</div>
+    <div style="font-size:.68rem;color:#78909c;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:4px;">Collected</div>
+    <div style="font-size:.66rem;color:#2e7d32;font-weight:600;margin-top:5px;">Tap to manage →</div>
+  </div>
+  <div class="scard" onclick="window.location='/attendance'" style="animation-delay:.15s;width:140px;flex:0 0 140px;">
+    <div style="font-size:1.5rem;margin-bottom:6px;">📋</div>
+    <div style="font-size:1.5rem;font-weight:900;color:#e65100;line-height:1;">{{ attendance_rate }}%</div>
+    <div style="font-size:.68rem;color:#78909c;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:4px;">Attendance</div>
+    <div style="font-size:.66rem;color:#e65100;font-weight:600;margin-top:5px;">Tap to manage →</div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="sec-title">⚡ Quick Actions</div>
+<div class="qgrid qgrid-4" style="margin-bottom:18px;">
+  <button class="qbtn qb-blue" onclick="openModal('searchModal')" style="animation-delay:.08s;">
+    <span class="qbtn-icon">🔍</span><span class="qbtn-label">Search Student</span>
+  </button>
+  <button class="qbtn qb-green" onclick="openModal('addModal')" style="animation-delay:.12s;">
+    <span class="qbtn-icon">➕</span><span class="qbtn-label">Add Student</span>
+  </button>
+  <button class="qbtn qb-red" onclick="openModal('deleteModal')" style="animation-delay:.16s;">
+    <span class="qbtn-icon">🗑️</span><span class="qbtn-label">Delete Student</span>
+  </button>
+  <a href="{{ url_for('attendance') }}" class="qbtn qb-orange" style="animation-delay:.2s;">
+    <span class="qbtn-icon">📋</span><span class="qbtn-label">Attendance</span>
+  </a>
+  <a href="{{ url_for('grades') }}" class="qbtn qb-navy" style="animation-delay:.24s;">
+    <span class="qbtn-icon">📊</span><span class="qbtn-label">Examinations</span>
+  </a>
+  <a href="{{ url_for('fees') }}" class="qbtn qb-teal" style="animation-delay:.28s;">
+    <span class="qbtn-icon">💰</span><span class="qbtn-label">Fees</span>
+  </a>
+  <a href="{{ url_for('monthly_fees') }}" class="qbtn qb-gold" style="animation-delay:.32s;">
+    <span class="qbtn-icon">🗓️</span><span class="qbtn-label">Monthly Fees</span>
+  </a>
+  <a href="{{ url_for('id_cards') }}" class="qbtn qb-purple" style="animation-delay:.36s;">
+    <span class="qbtn-icon">🪪</span><span class="qbtn-label">ID Cards</span>
+  </a>
+</div>
+
+<!-- NEW SCHOOL YEAR -->
+<div class="sec-title">🎓 New School Year</div>
+<div style="background:white;border-radius:18px;padding:20px;border:2px solid #e8eaf6;box-shadow:0 3px 14px rgba(0,0,0,.07);margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1a237e,#1565c0);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">🎓</div>
+    <div style="flex:1;">
+      <div style="font-weight:900;font-size:.94rem;color:#1a237e;">Start New School Year</div>
+      <div style="font-size:.74rem;color:#78909c;margin-top:2px;">Preview → Override → Confirm → Done</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#78909c;letter-spacing:.5px;display:block;margin-bottom:5px;">CURRENT YEAR</label>
+      <input type="text" id="currentYear" value="{{ school_year }}" readonly
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #e8eaf6;font-size:.86rem;font-weight:700;color:#546e7a;background:#f8f9ff;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#78909c;letter-spacing:.5px;display:block;margin-bottom:5px;">NEW YEAR</label>
+      <input type="text" id="newYear" placeholder="e.g. 2026-2027"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #90caf9;font-size:.86rem;font-weight:700;outline:none;box-sizing:border-box;"
+        oninput="autoNewYear(this)">
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button id="previewBtn" onclick="loadPromotePreview()" style="flex:1;padding:13px;background:linear-gradient(135deg,#1565c0,#1976d2);color:white;border:none;border-radius:12px;font-size:.88rem;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(21,101,192,.3);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      👁️ Preview Promotion
+    </button>
+  </div>
+  <div id="promotePreviewArea" style="margin-top:14px;"></div>
+</div>
+
+{# ══ OTHER ROLES ══ #}
+{% elif role == 'fee' %}
+<div class="hero"><div style="position:relative;z-index:1;"><div style="font-size:1.1rem;font-weight:900;">Welcome, Fee Admin 💰</div><div style="font-size:.8rem;opacity:.8;margin-top:4px;">Manage student fees and payments</div></div></div>
+<div class="sec-title">⚡ Quick Actions</div>
+<div class="qgrid qgrid-2">
+  <button class="qbtn qb-blue" onclick="openModal('searchModal')"><span class="qbtn-icon">🔍</span><span class="qbtn-label">Search Student</span></button>
+  <a href="{{ url_for('fees') }}" class="qbtn qb-green"><span class="qbtn-icon">💰</span><span class="qbtn-label">Manage Fees</span></a>
+</div>
+
+{% elif role == 'attendance' %}
+<div class="hero"><div style="position:relative;z-index:1;"><div style="font-size:1.1rem;font-weight:900;">Welcome, Attendance Admin 📋</div><div style="font-size:.8rem;opacity:.8;margin-top:4px;">Take and manage daily attendance</div></div></div>
+<div class="sec-title">⚡ Quick Actions</div>
+<div class="qgrid qgrid-2">
+  <button class="qbtn qb-blue" onclick="openModal('searchModal')"><span class="qbtn-icon">🔍</span><span class="qbtn-label">Search Student</span></button>
+  <a href="{{ url_for('attendance') }}" class="qbtn qb-orange"><span class="qbtn-icon">📋</span><span class="qbtn-label">Take Attendance</span></a>
+</div>
+
+{% elif role == 'grades' %}
+<div class="hero"><div style="position:relative;z-index:1;"><div style="font-size:1.1rem;font-weight:900;">Welcome, Grades Admin 📊</div><div style="font-size:.8rem;opacity:.8;margin-top:4px;">Manage examination results</div></div></div>
+<div class="sec-title">⚡ Quick Actions</div>
+<div class="qgrid qgrid-2">
+  <button class="qbtn qb-blue" onclick="openModal('searchModal')"><span class="qbtn-icon">🔍</span><span class="qbtn-label">Search Student</span></button>
+  <a href="{{ url_for('grades') }}" class="qbtn qb-navy"><span class="qbtn-icon">📊</span><span class="qbtn-label">Manage Grades</span></a>
+</div>
+
+{# ══════════ STUDENT ══════════ #}
+{% elif role == 'student' %}
+
+{% if student.get('Status') == 'Graduated' %}
+<div style="background:linear-gradient(135deg,#1a237e,#1565c0,#00796b);border-radius:20px;padding:28px;text-align:center;color:white;margin-bottom:18px;animation:slideUp .5s ease;">
+  <div style="font-size:3.5rem;margin-bottom:10px;">🎓</div>
+  <div style="font-size:1.4rem;font-weight:900;margin-bottom:6px;">Congratulations! 🎉</div>
+  <div style="opacity:.9;font-size:.92rem;">{{ student.get('Name', name) }} — Successfully <strong>Graduated!</strong> 🌟</div>
+</div>
+{% endif %}
+
+<div class="stu-hero">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative;z-index:1;text-align:center;">
+    <div style="position:relative;flex-shrink:0;">
+      <img src="{{ url_for('static',filename='images/students/'+session.get('student_id','')+'.jpg') }}"
+           alt="Profile" id="profilePhoto"
+           style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.3);object-fit:cover;box-shadow:0 4px 18px rgba(0,0,0,.3);"
+           onerror="this.src='{{ url_for('static',filename='images/logo.png') }}'">
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:1.08rem;font-weight:900;margin-bottom:5px;">{{ student.get('Name', name) }}</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;">
+        <span style="background:rgba(255,255,255,.18);padding:2px 10px;border-radius:10px;font-size:.73rem;font-weight:700;">{{ student.get('ID','') }}</span>
+        <span style="background:rgba(255,255,255,.13);padding:2px 10px;border-radius:10px;font-size:.73rem;font-weight:700;">
+          {% set cls = student.get('Class','') %}
+          {% if cls == 'Xaddaano' %}Xaddaano
+          {% elif cls in ['1','2','3','4','5','6','7','8'] %}Class {{ cls }}
+          {% else %}{{ cls }}{% endif %}
+        </span>
+        {% if student.get('Status') == 'Graduated' %}
+        <span style="background:rgba(255,215,0,.25);padding:2px 10px;border-radius:10px;font-size:.73rem;font-weight:700;color:#ffd060;">🎓 Graduated</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="fee-mini" style="margin-top:14px;position:relative;z-index:1;text-align:center;">
+    <div style="font-size:.66rem;font-weight:800;color:rgba(255,255,255,.6);letter-spacing:.6px;text-transform:uppercase;margin-bottom:8px;">💰 Fee Summary</div>
+    <div style="display:flex;justify-content:center;gap:12px;padding:4px 0;"><span style="font-size:.74rem;opacity:.8;font-weight:600;">Total Fee:</span><span style="font-size:.86rem;font-weight:900;">${{ student.get('Total_Fee',0) }}</span></div>
+    <div style="display:flex;justify-content:center;gap:12px;padding:4px 0;border-top:1px solid rgba(255,255,255,.1);"><span style="font-size:.74rem;opacity:.8;font-weight:600;">Paid:</span><span style="font-size:.86rem;font-weight:900;color:#a5d6a7;">${{ student.get('Amount_Paid',0) }}</span></div>
+    <div style="display:flex;justify-content:center;gap:12px;padding:4px 0;border-top:1px solid rgba(255,255,255,.1);"><span style="font-size:.74rem;opacity:.8;font-weight:600;">Balance:</span><span style="font-size:.86rem;font-weight:900;color:{% if student.get('Balance',0)|float > 0 %}#ef9a9a{% else %}#a5d6a7{% endif %};">${{ student.get('Balance',0) }}</span></div>
+  </div>
+</div>
+
+<div class="sec-title">⚡ Quick Access</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:6px;width:100%;">
+  <a href="{{ url_for('grades') }}" class="qbtn qb-navy" style="animation-delay:.08s;width:160px;flex:0 0 160px;">
+    <span class="qbtn-icon">📊</span><span class="qbtn-label">My Examinations</span><span class="qbtn-sub">Grades &amp; Results</span>
+  </a>
+  <a href="{{ url_for('fees') }}" class="qbtn qb-green" style="animation-delay:.12s;width:160px;flex:0 0 160px;">
+    <span class="qbtn-icon">💰</span><span class="qbtn-label">My Fees</span><span class="qbtn-sub">Payments &amp; Balance</span>
+  </a>
+  <button class="qbtn qb-teal" onclick="openAttModal()" style="animation-delay:.16s;width:160px;flex:0 0 160px;">
+    <span class="qbtn-icon">📋</span><span class="qbtn-label">Your Attendance</span><span class="qbtn-sub">History &amp; Rate</span>
+  </button>
+  <a href="{{ url_for('votes') }}" class="qbtn qb-orange" style="animation-delay:.2s;width:160px;flex:0 0 160px;">
+    <span class="qbtn-icon">🗳️</span><span class="qbtn-label">Vote</span><span class="qbtn-sub">School Election</span>
+  </a>
+</div>
+{% endif %}
+
+  </div>
+</div>
+
+{# STUDENT ATTENDANCE MODAL #}
+{% if role == 'student' %}
+<div class="modal-overlay" id="attModal" style="display:none;">
+<div class="modal" style="max-width:580px;">
+  <div style="background:linear-gradient(135deg,#0d47a1,#1565c0,#00695c);color:white;margin:-24px -24px 18px;padding:16px 22px;border-radius:14px 14px 0 0;font-size:.96rem;font-weight:800;">📋 Your Attendance — {{ name }}</div>
+  <div id="attModalBody"><div class="ske ske-row" style="margin-bottom:6px;"></div><div class="ske ske-row" style="margin-bottom:6px;width:85%"></div><div class="ske ske-row" style="width:70%"></div></div>
+  <div style="text-align:right;margin-top:14px;"><button class="btn btn-primary" onclick="closeModal('attModal')">✖ Close</button></div>
+</div>
+</div>
+{% endif %}
+
+{# SEARCH MODAL #}
+<div class="modal-overlay" id="searchModal" style="display:none;">
+<div class="modal">
+  <div class="modal-title">🔍 Search Student</div>
+  <input type="text" class="search-input" id="searchInput" placeholder="Search by ID, Name or Class..." oninput="liveSearch(this.value)" style="width:100%;margin-bottom:14px;">
+  <div id="searchResults" style="max-height:400px;overflow-y:auto;"><p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p></div>
+  <div style="margin-top:14px;text-align:right;"><button class="btn btn-danger" onclick="closeModal('searchModal')">✖ Close</button></div>
+</div>
+</div>
+
+{# ALL STUDENTS MODAL #}
+<div class="modal-overlay" id="studentsModal" style="display:none;">
+<div class="modal" style="max-width:700px;">
+  <div class="modal-title">👨‍🎓 All Students</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <input type="text" class="search-input" id="allSearch" placeholder="Search..." oninput="searchAll(this.value)" style="flex:1;min-width:140px;">
+    <select id="allClassFilter" onchange="searchAll(document.getElementById('allSearch').value)" class="form-control" style="width:130px;font-size:.8rem;">
+      <option value="">All Classes</option>
+      {% for c in classes %}<option value="{{ c }}">{{ c if c == 'Xaddaano' else ('Class '+c if c in ['1','2','3','4','5','6','7','8'] else c) }}</option>{% endfor %}
+    </select>
+  </div>
+  <div id="allResults" style="max-height:420px;overflow-y:auto;"><div class="ske ske-row" style="margin-bottom:6px;"></div><div class="ske ske-row" style="margin-bottom:6px;width:88%"></div><div class="ske ske-row" style="margin-bottom:6px;width:75%"></div><div class="ske ske-row" style="width:90%"></div></div>
+  <div style="margin-top:14px;text-align:right;"><button class="btn btn-danger" onclick="closeModal('studentsModal')">✖ Close</button></div>
+</div>
+</div>
+
+{% if role == 'admin' %}
+{# ADD STUDENT MODAL #}
+<div class="modal-overlay" id="addModal" style="display:none;">
+<div class="modal">
+  <div class="modal-title">➕ Add New Student</div>
+  <div class="form-row">
+    <div class="form-group"><label>Full Name *</label><input type="text" class="form-control" id="addName" placeholder="Student full name"></div>
+    <div class="form-group"><label>Class *</label>
+      <select class="form-control" id="addClass">
+        {% for c in classes %}<option value="{{ c }}">{{ c if c == 'Xaddaano' else ('Class '+c if c in ['1','2','3','4','5','6','7','8'] else c) }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="addPhone" placeholder="Phone number"></div>
+    <div class="form-group"><label>Total Fee ($)</label><input type="number" class="form-control" id="addFee" value="25"></div>
+  </div>
+  <div id="addResult" style="margin-bottom:12px;"></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <button class="btn btn-danger" onclick="closeModal('addModal')">✖ Cancel</button>
+    <button class="btn btn-success" onclick="addStudent()">➕ Add Student</button>
+  </div>
+</div>
+</div>
+
+{# DELETE MODAL #}
+<div class="modal-overlay" id="deleteModal" style="display:none;">
+<div class="modal">
+  <div class="modal-title">🗑️ Delete Student</div>
+  <input type="text" class="search-input" id="delInput" placeholder="Search student to delete..." oninput="delSearch(this.value)" style="width:100%;margin-bottom:14px;">
+  <div id="delResults" style="max-height:350px;overflow-y:auto;"><p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p></div>
+  <div style="margin-top:14px;text-align:right;"><button class="btn btn-danger" onclick="closeModal('deleteModal')">✖ Close</button></div>
+</div>
+</div>
+
+{# EDIT MODAL #}
+<div class="modal-overlay" id="editModal" style="display:none;">
+<div class="modal">
+  <div class="modal-title">✏️ Edit Student</div>
+  <input type="hidden" id="editId">
+
+  <!-- ── PHOTO UPLOAD (Admin only) ── -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:16px;">
+    <div style="position:relative;">
+      <img id="editPhotoPreview" src="{{ url_for('static',filename='images/logo.png') }}" alt="Student photo"
+           style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);background:#f0f4ff;cursor:pointer;"
+           onerror="this.src='{{ url_for('static',filename='images/logo.png') }}'"
+           onclick="document.getElementById('editPhotoInput').click()">
+      <div style="position:absolute;bottom:0;right:0;background:var(--accent);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.78rem;cursor:pointer;border:2px solid white;"
+           onclick="document.getElementById('editPhotoInput').click()">📷</div>
+    </div>
+    <input type="file" id="editPhotoInput" accept="image/jpeg,image/png,image/webp" style="display:none">
+    <span style="font-size:.72rem;color:var(--subtext);">Tap photo to change · JPG/PNG/WEBP, max 5MB</span>
+    <div id="editPhotoStatus" style="font-size:.76rem;"></div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group"><label>Full Name</label><input type="text" class="form-control" id="editName"></div>
+    <div class="form-group"><label>Class</label>
+      <select class="form-control" id="editClass">
+        {% for c in classes %}<option value="{{ c }}">{{ c if c == 'Xaddaano' else ('Class '+c if c in ['1','2','3','4','5','6','7','8'] else c) }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Phone</label><input type="text" class="form-control" id="editPhone"></div>
+    <div class="form-group"><label>Total Fee ($)</label><input type="number" class="form-control" id="editFee"></div>
+  </div>
+
+  <!-- ── PASSWORD RESET (Admin only) ── -->
+  <div class="modal-section" style="margin-bottom:12px;">
+    <div class="modal-section-title">🔒 Password</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0;">
+        <input type="text" class="form-control" id="editNewPassword"
+               placeholder="Leave blank for auto-generated" autocomplete="off">
+      </div>
+      <button class="btn btn-warning" onclick="resetStudentPassword()" style="white-space:nowrap;">
+        🔄 Reset Password
+      </button>
+    </div>
+    <div id="resetPasswordResult" style="margin-top:8px;font-size:.82rem;"></div>
+  </div>
+
+  <div id="editResult" style="margin-bottom:12px;"></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <button class="btn btn-danger" onclick="closeModal('editModal')">✖ Cancel</button>
+    <button class="btn btn-success" onclick="saveEdit()">💾 Save</button>
+  </div>
+</div>
+</div>
+
+{# PROMOTE CONFIRM MODAL #}
+<div class="modal-overlay" id="promoteModal" style="display:none;">
+<div class="modal" style="max-width:680px;">
+  <div class="modal-title">🎓 Confirm New School Year</div>
+  <div id="promoteConfirmContent" style="max-height:450px;overflow-y:auto;"></div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+    <button class="btn btn-danger" onclick="closeModal('promoteModal')">✖ Cancel</button>
+    <button class="btn btn-success" id="confirmPromoteBtn" onclick="executePromote()">🎓 Confirm &amp; Start New Year</button>
+  </div>
+</div>
+</div>
+{% endif %}
+
+<script>
+var ALL_STU = {{ all_students|tojson if all_students is defined else '[]' }};
+var _overrides = {};
+
+/* ── UTILS ── */
+function showAlert(msg,type){var c=document.getElementById('alertContainer');if(!c)return;var el=document.createElement('div');el.className='alert alert-'+(type||'success');el.innerHTML=(type==='error'?'❌':'✅')+' '+msg;c.appendChild(el);setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(function(){el.remove();},300);},3500);}
+document.querySelectorAll('.modal-overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o){o.style.display='none';document.body.style.overflow='';}});});
+
+/* ── AUTO NEW YEAR ── */
+function autoNewYear(el){
+  var cur=document.getElementById('currentYear').value||'';
+  if(!el.value&&cur){
+    var parts=cur.split('-');
+    if(parts.length===2){
+      var y=parseInt(parts[1]);
+      if(!isNaN(y)) el.value=y+'-'+(y+1);
+    }
+  }
+}
+
+/* ── PROMOTE PREVIEW ── */
+function loadPromotePreview(){
+  var area=document.getElementById('promotePreviewArea');
+  if(!area) return;
+  var btn=document.getElementById('previewBtn');
+  if(btn){btn.innerHTML='<span style="display:inline-block;width:14px;height:14px;border:2.5px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;"></span>Loading...';btn.disabled=true;}
+  area.innerHTML='<div style="text-align:center;padding:20px;"><div style="width:28px;height:28px;border:3px solid rgba(21,101,192,.2);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;"></div><p style="color:var(--subtext);font-size:.84rem;margin-top:8px;">Loading preview...</p></div>';
+  fetch('/preview_promote',{credentials:'same-origin'})
+  .then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  })
+  .then(function(d){
+    if(btn){btn.innerHTML='👁️ Preview Promotion';btn.disabled=false;}
+    if(!d.success){
+      area.innerHTML='<div class="alert alert-error">❌ '+(d.message||'Error loading preview')+'</div>';
+      return;
+    }
+    if(!d.preview||!d.preview.length){
+      area.innerHTML='<div style="text-align:center;padding:20px;color:var(--subtext);">No active students found</div>';
+      return;
+    }
+    renderPreview(d.preview,area);
+  })
+  .catch(function(err){
+    if(btn){btn.innerHTML='👁️ Preview Promotion';btn.disabled=false;}
+    console.error('Preview error:',err);
+    area.innerHTML='<div class="alert alert-error">❌ Error: '+err.message+'</div>';
+  });
+}
+
+function renderPreview(preview,area){
+  if(!preview||!preview.length){area.innerHTML='<p style="color:var(--subtext);text-align:center;padding:16px;">No students found</p>';return;}
+  var promoted=preview.filter(function(p){return p.action==='promote';}).length;
+  var failed=preview.filter(function(p){return p.action==='fail';}).length;
+  var graduated=preview.filter(function(p){return p.action==='graduate';}).length;
+
+  var html='';
+  /* Summary */
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">';
+  html+='<div style="background:#e8f5e9;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#2e7d32;">'+promoted+'</div><div style="font-size:.7rem;color:#2e7d32;font-weight:700;">✅ Promoted</div></div>';
+  html+='<div style="background:#fff9e6;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#f57f17;">'+graduated+'</div><div style="font-size:.7rem;color:#f57f17;font-weight:700;">🎓 Graduated</div></div>';
+  html+='<div style="background:#ffebee;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:900;color:#c62828;">'+failed+'</div><div style="font-size:.7rem;color:#c62828;font-weight:700;">❌ Failed</div></div>';
+  html+='</div>';
+  html+='<div style="font-size:.72rem;color:#90a4ae;margin-bottom:8px;display:flex;align-items:center;gap:5px;">💡 <span>You can override any student\'s action before confirming</span></div>';
+  html+='<div style="overflow-x:auto;">';
+  html+='<table class="prev-tbl"><thead><tr><th>ID</th><th>Name</th><th>Current Class</th><th>→ Next</th><th>Avg%</th><th>Action</th></tr></thead><tbody>';
+  preview.forEach(function(p){
+    var cur=_overrides[p.id]||p.action;
+    var chip=cur==='promote'?'<span class="ac-promote">✅ Promote</span>':cur==='graduate'?'<span class="ac-graduate">🎓 Graduate</span>':'<span class="ac-fail">❌ Fail</span>';
+    var opts='<select onchange="setOverride(\''+p.id+'\',this.value,this)" style="margin-left:6px;padding:2px 5px;border-radius:6px;border:1px solid #e0e0e0;font-size:.7rem;font-weight:700;cursor:pointer;">'
+      +'<option value="auto"'+(cur===p.action&&!_overrides[p.id]?' selected':'')+'>'+(p.action==='promote'?'✅ Auto':p.action==='graduate'?'🎓 Auto':'❌ Auto')+'</option>'
+      +'<option value="promote"'+(cur==='promote'&&_overrides[p.id]?' selected':'')+'>✅ Promote</option>'
+      +'<option value="fail"'+(cur==='fail'&&_overrides[p.id]?' selected':'')+'>❌ Fail</option>'
+      +(p.current_class==='Form Four'?'<option value="graduate"'+(cur==='graduate'&&_overrides[p.id]?' selected':'')+'>🎓 Graduate</option>':'')
+      +'</select>';
+    html+='<tr id="pvrow_'+p.id+'">';
+    html+='<td><span class="badge badge-primary" style="font-size:.68rem;">'+p.id+'</span></td>';
+    html+='<td style="font-weight:700;font-size:.82rem;">'+p.name+'</td>';
+    html+='<td style="font-size:.78rem;color:#546e7a;">'+p.current_display+'</td>';
+    html+='<td style="font-size:.78rem;font-weight:700;color:'+(cur==='fail'?'#c62828':cur==='graduate'?'#f57f17':'#2e7d32')+';">'+((cur==='fail')?p.current_display:(cur==='graduate'?'🎓 Graduated':p.next_display))+'</td>';
+    html+='<td style="font-weight:700;color:'+(p.avg>=50?'#2e7d32':'#c62828')+';">'+p.avg+'%</td>';
+    html+='<td>'+chip+opts+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<button onclick="openConfirmPromote()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#1a237e,#1565c0);color:white;border:none;border-radius:12px;font-size:.9rem;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(21,101,192,.3);" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">🎓 Proceed to Confirm →</button>';
+  area.innerHTML=html;
+  window._previewData=preview;
+}
+
+function setOverride(id,val,sel){
+  if(val==='auto') delete _overrides[id];
+  else _overrides[id]=val;
+  /* Update row visuals */
+  var row=document.getElementById('pvrow_'+id);
+  if(!row) return;
+  var cur=_overrides[id]||(window._previewData||[]).find(function(p){return p.id===id;})?.action||'promote';
+  row.querySelectorAll('td')[5].children[0].outerHTML=(cur==='promote'?'<span class="ac-promote">✅ Promote</span>':cur==='graduate'?'<span class="ac-graduate">🎓 Graduate</span>':'<span class="ac-fail">❌ Fail</span>');
+}
+
+function openConfirmPromote(){
+  var ny=document.getElementById('newYear').value.trim();
+  if(!ny){showAlert('Please enter the new school year!','error');return;}
+  var promoted=(window._previewData||[]).filter(function(p){return (_overrides[p.id]||p.action)==='promote';});
+  var graduated=(window._previewData||[]).filter(function(p){return (_overrides[p.id]||p.action)==='graduate';});
+  var failed=(window._previewData||[]).filter(function(p){return (_overrides[p.id]||p.action)==='fail';});
+  var html='<div style="background:linear-gradient(135deg,#e8f5e9,#e3f2fd);border-radius:12px;padding:16px;margin-bottom:14px;">';
+  html+='<div style="font-weight:900;font-size:.92rem;color:#1a237e;margin-bottom:8px;">📋 Summary — '+ny+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+  html+='<div style="background:white;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:1.3rem;font-weight:900;color:#2e7d32;">'+promoted.length+'</div><div style="font-size:.68rem;color:#78909c;font-weight:700;">PROMOTED</div></div>';
+  html+='<div style="background:white;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:1.3rem;font-weight:900;color:#f57f17;">'+graduated.length+'</div><div style="font-size:.68rem;color:#78909c;font-weight:700;">GRADUATED</div></div>';
+  html+='<div style="background:white;border-radius:8px;padding:10px;text-align:center;"><div style="font-size:1.3rem;font-weight:900;color:#c62828;">'+failed.length+'</div><div style="font-size:.68rem;color:#78909c;font-weight:700;">FAILED</div></div>';
+  html+='</div></div>';
+  html+='<div style="background:#fff3e0;border-left:4px solid #f57f17;padding:10px 14px;border-radius:8px;font-size:.82rem;font-weight:700;color:#e65100;margin-bottom:12px;">⚠️ This action will update all student classes in Google Sheets. Are you sure?</div>';
+  document.getElementById('promoteConfirmContent').innerHTML=html;
+  openModal('promoteModal');
+}
+
+function executePromote(){
+  var ny=document.getElementById('newYear').value.trim();
+  var btn=document.getElementById('confirmPromoteBtn');
+  btn.innerHTML='<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;margin-right:6px;"></span> Processing...';
+  btn.disabled=true;
+  fetch('/promote_students',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({overrides:_overrides,new_year:ny})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    btn.innerHTML='🎓 Confirm & Start New Year';btn.disabled=false;
+    if(d.success){
+      closeModal('promoteModal');
+      document.getElementById('promotePreviewArea').innerHTML='<div class="alert alert-success" style="animation:fadeIn .3s ease;">✅ '+d.message+'</div>';
+      showAlert(d.message,'success');
+      _overrides={};
+      document.getElementById('currentYear').value=ny;
+    } else {
+      showAlert('❌ '+d.message,'error');
+    }
+  })
+  .catch(function(){btn.innerHTML='🎓 Confirm & Start New Year';btn.disabled=false;showAlert('❌ Connection error!','error');});
+}
+
+/* ── SEARCH ── */
+function liveSearch(q){
+  if(!q){document.getElementById('searchResults').innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p>';return;}
+  var role='{{ role }}';
+  fetch('/search_student?q='+encodeURIComponent(q),{credentials:'same-origin'})
+  .then(function(r){if(!r.ok) throw new Error('HTTP '+r.status); return r.json();})
+  .then(function(data){
+    var c=document.getElementById('searchResults');
+    if(!data.students||!data.students.length){c.innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">No students found</p>';return;}
+    var html='';
+    data.students.forEach(function(s){
+      var cls=s.Class==='Xaddaano'?'Xaddaano':['1','2','3','4','5','6','7','8'].includes(String(s.Class))?'Class '+s.Class:s.Class;
+      var btns='';
+      if(role==='admin'){
+        btns='<div style="display:flex;flex-wrap:wrap;gap:4px;">'
+          +'<a href="/fees?search='+encodeURIComponent(s.ID)+'" class="btn btn-success" style="padding:4px 9px;font-size:.72rem;">💰</a>'
+          +'<a href="/grades?search='+encodeURIComponent(s.ID)+'" class="btn btn-primary" style="padding:4px 9px;font-size:.72rem;">📊</a>'
+          +'<button onclick="openEdit(\'' +s.ID+ '\',\'' +encodeURIComponent(s.Name||'')+ '\',\'' +encodeURIComponent(s.Class||'')+ '\',\'' +encodeURIComponent(s.Phone||'')+ '\',\'' +(s.Total_Fee||25)+ '\')" class="btn btn-warning" style="padding:4px 9px;font-size:.72rem;">✏️</button>'
+          +'</div>';
+      }
+      else if(role==='fee'){btns='<a href="/fees?search='+s.ID+'" class="btn btn-success" style="padding:5px 12px;font-size:.78rem;">💰 Fees</a>';}
+      else if(role==='attendance'){btns='<a href="/attendance?class='+s.Class+'" class="btn btn-primary" style="padding:5px 12px;font-size:.78rem;">📋</a>';}
+      else if(role==='grades'){btns='<a href="/grades?search='+s.ID+'" class="btn btn-primary" style="padding:5px 12px;font-size:.78rem;">📊</a>';}
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0;gap:8px;flex-wrap:wrap;"><div style="flex:1;min-width:0;"><strong style="color:var(--primary);font-size:.84rem;">'+s.ID+'</strong> <strong style="font-size:.84rem;">'+(s.Name||'')+'</strong><br><span style="color:var(--subtext);font-size:.76rem;">'+cls+(s.Status==='Graduated'?' 🎓 Graduated':'')+'</span></div>'+btns+'</div>';
+    });
+    c.innerHTML=html;
+  });
+}
+
+/* ── ALL STUDENTS TABLE ── */
+function openStudentsModal(){
+  openModal('studentsModal');
+  /* Always reload fresh data when opening */
+  var el=document.getElementById('allResults');
+  if(el) el.innerHTML='<div style="text-align:center;padding:24px;"><div style="width:26px;height:26px;border:3px solid rgba(21,101,192,.2);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;"></div><p style="color:var(--subtext);font-size:.84rem;">Loading students...</p></div>';
+  if(ALL_STU && ALL_STU.length > 0){
+    renderAll(ALL_STU);
+    var num=document.getElementById('totalStudentsNum');
+    if(num) num.textContent=ALL_STU.length;
+  } else {
+    fetchAllStudents();
+  }
+}
+function fetchAllStudents(){
+  fetch('/search_student?q=cs',{credentials:'same-origin'})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    ALL_STU = d.students || [];
+    renderAll(ALL_STU);
+    var num=document.getElementById('totalStudentsNum');
+    if(num) num.textContent=ALL_STU.length;
+  })
+  .catch(function(){
+    var el=document.getElementById('allResults');
+    if(el) el.innerHTML='<p style="text-align:center;color:var(--subtext);padding:20px;">Error loading. Please try again.</p>';
+  });
+}
+function loadAll(){
+  if(ALL_STU && ALL_STU.length > 0){
+    renderAll(ALL_STU);
+    var el=document.getElementById('totalStudentsNum');
+    if(el) el.textContent=ALL_STU.length;
+  } else {
+    /* Fetch live if Jinja data was empty */
+    var el2=document.getElementById('allResults');
+    if(el2) el2.innerHTML='<div style="text-align:center;padding:20px;"><div class="spinner" style="width:24px;height:24px;border-width:3px;margin:0 auto 8px;border-top-color:var(--primary);border-color:rgba(21,101,192,.2);display:inline-block;border-style:solid;border-radius:50%;animation:spin .7s linear infinite;"></div><p style="color:var(--subtext);">Loading...</p></div>';
+    fetch('/search_student?q=cs',{credentials:'same-origin'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      ALL_STU = d.students || [];
+      renderAll(ALL_STU);
+      var en=document.getElementById('totalStudentsNum');
+      if(en) en.textContent=ALL_STU.length;
+    })
+    .catch(function(){
+      var el3=document.getElementById('allResults');
+      if(el3) el3.innerHTML='<p style="text-align:center;color:var(--subtext);padding:20px;">Error loading. Please refresh.</p>';
+    });
+  }
+}
+function searchAll(q){
+  var cf=document.getElementById('allClassFilter').value;
+  var ql=(q||'').toLowerCase();
+  renderAll(ALL_STU.filter(function(s){
+    var nameMatch=!ql||(s.ID||'').toLowerCase().includes(ql)||(s.Name||'').toLowerCase().includes(ql);
+    var classMatch=!cf||String(s.Class)===String(cf);
+    return nameMatch&&classMatch;
+  }));
+}
+function renderAll(students){
+  var el=document.getElementById('allResults');
+  if(!students||!students.length){el.innerHTML='<p style="text-align:center;color:var(--subtext);padding:20px;">No students found</p>';return;}
+  var html='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:420px;font-size:.8rem;">';
+  html+='<thead><tr style="background:linear-gradient(135deg,#1a237e,#1565c0);color:white;"><th style="padding:9px 8px;">ID</th><th style="padding:9px 8px;">Name</th><th style="padding:9px 8px;">Class</th><th style="padding:9px 8px;">Balance</th><th style="padding:9px 8px;">Status</th><th style="padding:9px 8px;">Action</th></tr></thead><tbody>';
+  students.forEach(function(s){
+    var bal=parseFloat(s.Balance||0),isGrad=s.Status==='Graduated';
+    var cls=s.Class==='Xaddaano'?'Xaddaano':['1','2','3','4','5','6','7','8'].includes(String(s.Class))?'Cls '+s.Class:s.Class;
+    html+='<tr style="border-bottom:1px solid #f0f0f0;">';
+    html+='<td style="padding:8px;"><span class="badge badge-primary" style="font-size:.68rem;">'+s.ID+'</span></td>';
+    html+='<td style="padding:8px;font-weight:700;font-size:.82rem;">'+(s.Name||'')+'</td>';
+    html+='<td style="padding:8px;font-size:.76rem;color:var(--subtext);">'+cls+'</td>';
+    html+='<td style="padding:8px;"><span style="font-weight:800;color:'+(bal>0?'var(--error)':'var(--success)')+';">$'+bal.toFixed(2)+'</span></td>';
+    html+='<td style="padding:8px;"><span style="background:'+(isGrad?'#fff9e6':'#e8f5e9')+';color:'+(isGrad?'#F57F17':'var(--success)')+';padding:2px 7px;border-radius:8px;font-size:.68rem;font-weight:600;">'+(isGrad?'🎓':'✅ Active')+'</span></td>';
+    html+='<td style="padding:8px;"><button onclick="openEdit(\''+s.ID+'\',\''+encodeURIComponent(s.Name||'')+'\',\''+s.Class+'\',\''+(s.Phone||'')+'\',\''+(s.Total_Fee||25)+'\')" class="btn btn-warning" style="padding:4px 9px;font-size:.7rem;">✏️</button></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+function openEdit(id,en,cls,phone,fee){
+  var name  = decodeURIComponent(en||'');
+  var clsDec= decodeURIComponent(cls||'');
+  var phoneDec= decodeURIComponent(phone||'');
+  document.getElementById('editId').value   = id;
+  document.getElementById('editName').value = name;
+  var ec = document.getElementById('editClass');
+  if(ec){
+    /* Try exact match first */
+    var found = false;
+    for(var i=0;i<ec.options.length;i++){
+      if(ec.options[i].value===clsDec){ec.selectedIndex=i;found=true;break;}
+    }
+    if(!found) ec.value = clsDec;
+  }
+  document.getElementById('editPhone').value = phoneDec;
+  document.getElementById('editFee').value   = fee||25;
+  document.getElementById('editResult').innerHTML='';
+  document.getElementById('editPhotoStatus').innerHTML='';
+  document.getElementById('editPhotoPreview').src = '/static/images/students/'+id+'.jpg?v='+Date.now();
+  document.getElementById('editNewPassword').value = '';
+  document.getElementById('resetPasswordResult').innerHTML = '';
+  var pin = document.getElementById('editPhotoInput');
+  if(pin) pin.value = '';
+  openModal('editModal');
+}
+function saveEdit(){
+  var id=document.getElementById('editId').value,
+      name=document.getElementById('editName').value.trim(),
+      cls=document.getElementById('editClass').value,
+      phone=document.getElementById('editPhone').value.trim(),
+      fee=document.getElementById('editFee').value;
+  if(!name){document.getElementById('editResult').innerHTML='<div class="alert alert-error">❌ Name required!</div>';return;}
+  var btn=event.target;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;"></span>';btn.disabled=true;
+  fetch('/edit_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:id,name:name,'class':cls,phone:phone,total_fee:fee})})
+  .then(function(r){return r.json();}).then(function(d){btn.innerHTML='💾 Save';btn.disabled=false;if(d.success){document.getElementById('editResult').innerHTML='<div class="alert alert-success">✅ Updated!</div>';setTimeout(function(){closeModal('editModal');location.reload();},1400);}else{document.getElementById('editResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}});
+}
+function resetStudentPassword(){
+  var id = document.getElementById('editId').value;
+  var newPass = document.getElementById('editNewPassword').value.trim();
+  var resultEl = document.getElementById('resetPasswordResult');
+
+  if(newPass && newPass.length < 4){
+    resultEl.innerHTML = '<span style="color:var(--error);">❌ Password must be at least 4 characters</span>';
+    return;
+  }
+
+  var btn = event.target;
+  var origText = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;"></span>';
+  btn.disabled = true;
+
+  fetch('/reset_password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    credentials: 'same-origin',
+    body: JSON.stringify({student_id: id, new_password: newPass})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    btn.innerHTML = origText;
+    btn.disabled = false;
+    if(d.success){
+      resultEl.innerHTML = '<div class="alert alert-success" style="margin:0;">✅ New password: <strong>'+d.new_password+'</strong> — share this with the student</div>';
+      document.getElementById('editNewPassword').value = '';
+    } else {
+      resultEl.innerHTML = '<div class="alert alert-error" style="margin:0;">❌ '+d.message+'</div>';
+    }
+  })
+  .catch(function(){
+    btn.innerHTML = origText;
+    btn.disabled = false;
+    resultEl.innerHTML = '<div class="alert alert-error" style="margin:0;">❌ Connection failed — please try again</div>';
+  });
+}
+
+function addStudent(){
+  var name=document.getElementById('addName').value.trim(),cls=document.getElementById('addClass').value,phone=document.getElementById('addPhone').value.trim(),fee=document.getElementById('addFee').value;
+  if(!name){document.getElementById('addResult').innerHTML='<div class="alert alert-error">❌ Name required!</div>';return;}
+  var btn=event.target;btn.innerHTML='<span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;"></span>';btn.disabled=true;
+  var fd=new FormData();fd.append('name',name);fd.append('class',cls);fd.append('phone',phone);fd.append('total_fee',fee);
+  fetch('/add_student',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){btn.innerHTML='➕ Add Student';btn.disabled=false;if(d.success){document.getElementById('addResult').innerHTML='<div class="alert alert-success">✅ '+d.message+'</div>';setTimeout(function(){closeModal('addModal');location.reload();},2000);}else{document.getElementById('addResult').innerHTML='<div class="alert alert-error">❌ '+d.message+'</div>';}});
+}
+function delSearch(q){
+  if(!q){document.getElementById('delResults').innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">Type to search...</p>';return;}
+  fetch('/search_student?q='+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(data){
+    var c=document.getElementById('delResults');
+    if(!data.students||!data.students.length){c.innerHTML='<p style="color:var(--subtext);text-align:center;padding:20px;">No students found</p>';return;}
+    var html='';
+    data.students.forEach(function(s){html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0;"><div><strong>'+(s.Name||'')+'</strong><span style="color:var(--subtext);font-size:.8rem;margin-left:8px;">'+s.ID+' | '+s.Class+'</span></div><button class="btn btn-danger" style="padding:5px 12px;font-size:.78rem;" onclick="doDelete(\''+s.ID+'\',\''+s.Name+'\')">🗑️ Delete</button></div>';});
+    c.innerHTML=html;
+  });
+}
+function doDelete(id,name){
+  if(!confirm('Delete '+name+'?')) return;
+  fetch('/delete_student',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:id})})
+  .then(function(r){return r.json();}).then(function(d){if(d.success){showAlert('Deleted: '+name,'success');setTimeout(function(){location.reload();},1400);}else{showAlert('❌ '+d.message,'error');}});
+}
+
+/* ── ATTENDANCE MODAL (student) ── */
+function openAttModal(){
+  openModal('attModal');
+  var body=document.getElementById('attModalBody');
+  body.innerHTML='<div style="text-align:center;padding:28px;"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 10px;border-color:rgba(21,101,192,.2);border-top-color:var(--primary);"></div><p style="color:var(--subtext);">Loading...</p></div>';
+  var sid='{{ session.get("student_id","") }}';
+  fetch('/get_attendance?student_id='+encodeURIComponent(sid))
+  .then(function(r){return r.json();})
+  .then(function(d){renderAttModal(d.records||[]);})
+  .catch(function(){body.innerHTML='<p style="color:var(--error);text-align:center;padding:20px;">Error loading attendance</p>';});
+}
+function renderAttModal(records){
+  var body=document.getElementById('attModalBody');
+  if(!records.length){body.innerHTML='<div style="text-align:center;padding:32px;"><div style="font-size:3rem;margin-bottom:10px;">📋</div><div style="font-weight:800;color:var(--dark);">No attendance records yet</div><div style="color:var(--subtext);font-size:.82rem;margin-top:5px;">Your teacher will record attendance soon</div></div>';return;}
+  var subjMap={},total=0,present=0;
+  records.forEach(function(r){
+    var subj=r.subject||'General';
+    if(!subjMap[subj]) subjMap[subj]={present:0,absent:0,total:0};
+    subjMap[subj].total++;total++;
+    if(r.status==='Present'){subjMap[subj].present++;present++;}
+    else subjMap[subj].absent++;
+  });
+  var pct=total>0?Math.round(present/total*100):0;
+  var pClr=pct>=75?'#2e7d32':pct>=50?'#f57f17':'#c62828';
+  var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">';
+  html+='<div style="background:#e3f2fd;border-radius:11px;padding:12px;text-align:center;"><div style="font-size:1.35rem;font-weight:900;color:#1565c0;">'+total+'</div><div style="font-size:.66rem;color:#78909c;font-weight:700;text-transform:uppercase;margin-top:3px;">Total</div></div>';
+  html+='<div style="background:#e8f5e9;border-radius:11px;padding:12px;text-align:center;"><div style="font-size:1.35rem;font-weight:900;color:#2e7d32;">'+present+'</div><div style="font-size:.66rem;color:#78909c;font-weight:700;text-transform:uppercase;margin-top:3px;">Present</div></div>';
+  html+='<div style="background:'+(pct>=75?'#e8f5e9':pct>=50?'#fff8e1':'#ffebee')+';border-radius:11px;padding:12px;text-align:center;"><div style="font-size:1.35rem;font-weight:900;color:'+pClr+';">'+pct+'%</div><div style="font-size:.66rem;color:#78909c;font-weight:700;text-transform:uppercase;margin-top:3px;">Rate</div></div>';
+  html+='</div>';
+  Object.keys(subjMap).sort().forEach(function(subj){
+    var d=subjMap[subj];var p=d.total>0?Math.round(d.present/d.total*100):0;
+    var clr=p>=75?'#2e7d32':p>=50?'#f57f17':'#c62828';
+    var attScore=(p/10).toFixed(1);
+    html+='<div class="att-subj-card" style="border-left-color:'+clr+';">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;">';
+    html+='<div><div style="font-weight:800;font-size:.88rem;color:#1a237e;">'+subj+'</div>';
+    html+='<div style="font-size:.7rem;color:#78909c;margin-top:2px;">✅ '+d.present+' &nbsp;❌ '+d.absent+' &nbsp;Score: '+attScore+'/10</div></div>';
+    html+='<div style="font-size:1.25rem;font-weight:900;color:'+clr+';">'+p+'%</div></div>';
+    html+='<div class="att-bar"><div class="att-bar-fill" style="background:'+clr+';width:'+p+'%;"></div></div>';
+    html+='</div>';
+  });
+  html+='<div style="font-size:.7rem;font-weight:800;color:#78909c;letter-spacing:.5px;text-transform:uppercase;margin:12px 0 8px;">📅 Recent History</div>';
+  html+='<div style="overflow-x:auto;max-height:220px;overflow-y:auto;border-radius:10px;border:1px solid #e8eaf6;">';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:.76rem;min-width:300px;">';
+  html+='<thead style="position:sticky;top:0;"><tr style="background:linear-gradient(135deg,#1a237e,#1565c0);color:white;">';
+  html+='<th style="padding:8px 9px;">Date</th><th style="padding:8px 9px;">Subject</th><th style="padding:8px 9px;">Status</th>';
+  html+='</tr></thead><tbody>';
+  records.slice().sort(function(a,b){return b.date>a.date?1:-1;}).forEach(function(r){
+    var sc=r.status==='Present'?'#e8f5e9,#2e7d32':'#ffebee,#c62828';var parts=sc.split(',');
+    html+='<tr style="border-bottom:1px solid #f0f4ff;"><td style="padding:7px 9px;color:#78909c;">'+r.date+'</td>';
+    html+='<td style="padding:7px 9px;font-weight:700;color:#1a237e;">'+r.subject+'</td>';
+    html+='<td style="padding:7px 9px;"><span style="background:'+parts[0]+';color:'+parts[1]+';padding:2px 9px;border-radius:10px;font-size:.7rem;font-weight:700;">'+(r.status==='Present'?'✅':'❌')+' '+r.status+'</span></td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  body.innerHTML=html;
+}
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded',function(){
+  var d=document.getElementById('currentDate');
+  if(d) d.textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  {% if role == 'admin' %}loadAll();{% endif %}
+
+  /* Photo upload — Edit Student modal (admin only) */
+  var epi = document.getElementById('editPhotoInput');
+  if(epi){
+    epi.addEventListener('change', function(e){
+      var f = e.target.files[0];
+      if(!f) return;
+      var sid    = document.getElementById('editId').value;
+      var status = document.getElementById('editPhotoStatus');
+      var preview= document.getElementById('editPhotoPreview');
+
+      if(f.size > 5*1024*1024){
+        status.innerHTML = '<span style="color:var(--error);">❌ File too large (max 5MB)</span>';
+        epi.value = '';
+        return;
+      }
+      var validTypes = ['image/jpeg','image/jpg','image/png','image/webp'];
+      if(validTypes.indexOf(f.type) === -1){
+        status.innerHTML = '<span style="color:var(--error);">❌ Only JPG, PNG or WEBP allowed</span>';
+        epi.value = '';
+        return;
+      }
+
+      // Instant local preview while uploading
+      var reader = new FileReader();
+      reader.onload = function(ev){ preview.src = ev.target.result; };
+      reader.readAsDataURL(f);
+
+      status.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;border-top-color:var(--primary);border-color:rgba(21,101,192,.2);"></span> Uploading...';
+
+      var fd = new FormData();
+      fd.append('photo', f);
+      fd.append('student_id', sid);
+
+      fetch('/upload_photo', {method:'POST', body:fd, credentials:'same-origin'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if(d.success){
+            status.innerHTML = '<span style="color:var(--success);">✅ Photo updated</span>';
+            preview.src = d.photo_url;
+            CACHE.del('q_'); CACHE.del('students');
+          } else {
+            status.innerHTML = '<span style="color:var(--error);">❌ '+(d.message||'Upload failed')+'</span>';
+          }
+        })
+        .catch(function(){
+          status.innerHTML = '<span style="color:var(--error);">❌ Connection failed — please try again</span>';
+        });
+    });
+  }
+
+  /* Auto-fill new year */
+  var ny=document.getElementById('newYear');
+  if(ny){
+    var cy='{{ school_year }}';var parts=cy.split('-');
+    if(parts.length===2){var y=parseInt(parts[1]);if(!isNaN(y)) ny.value=y+'-'+(y+1);}
+  }
+});
+</script>
+</body>
+</html>
